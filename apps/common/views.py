@@ -1,5 +1,7 @@
 from datetime import UTC, datetime
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,6 +9,10 @@ from rest_framework.views import APIView
 from .serializers import SnapshotSerializer
 
 
+@extend_schema(
+    summary="Connectivity check for the offline admin",
+    responses={200: OpenApiTypes.OBJECT},
+)
 class PingView(APIView):
     """
     Lightweight connectivity check for the admin offline UI.
@@ -26,6 +32,17 @@ class PingView(APIView):
         )
 
 
+@extend_schema(
+    summary="Reference data for offline use, scoped to the caller",
+    parameters=[
+        OpenApiParameter(
+            "since",
+            OpenApiTypes.DATETIME,
+            description="Only rows changed after this ISO timestamp.",
+        )
+    ],
+    responses={200: OpenApiTypes.OBJECT},
+)
 class SnapshotView(APIView):
     """
     Returns a snapshot of reference data for offline use.

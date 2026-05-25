@@ -1,5 +1,6 @@
 """Replenishment API."""
 
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -54,8 +55,9 @@ class ReplenishmentAdviceView(APIView):
                 str,
                 description="Only return this risk band (critical, reorder, watch, ok).",
             ),
-            OpenApiParameter("limit", int, description="Maximum rows."),
+            OpenApiParameter("limit", int, description="Maximum rows (default 50)."),
         ],
+        responses={200: OpenApiTypes.OBJECT, 400: OpenApiTypes.OBJECT},
     )
     def get(self, request, *_args, **_kwargs):
         try:

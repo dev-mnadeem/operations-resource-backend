@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "apps.users",
     "apps.branch",
     "apps.warehouse",
@@ -193,6 +194,14 @@ REST_FRAMEWORK = {
         # The admin's offline UI calls the API with its session cookie.
         "rest_framework.authentication.SessionAuthentication",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Arcadian operations API",
+    "DESCRIPTION": "Barcode lookup, offline snapshot and replenishment advice.",
+    "VERSION": "1",
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAuthenticated"],
 }
 
 JAZZMIN_SETTINGS = {

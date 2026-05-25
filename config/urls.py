@@ -2,6 +2,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView
 
 from .views import root_redirect
 
@@ -14,6 +15,7 @@ urlpatterns = [
     path("", include("apps.common.urls")),
     path("api/v1/", include("apps.inventory.urls")),
     path("api/v1/", include("apps.replenishment.urls")),
+    path("api/v1/schema/", SpectacularAPIView.as_view(), name="api-schema"),
 ]
 
 if settings.DEBUG:

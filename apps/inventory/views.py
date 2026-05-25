@@ -1,3 +1,5 @@
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,6 +10,10 @@ from apps.permissions import is_admin, is_branch_manager, is_warehouse_manager
 from .models import BranchInventory, InventoryItem
 
 
+@extend_schema(
+    summary="Look up an inventory item by barcode",
+    responses={200: OpenApiTypes.OBJECT, 404: OpenApiTypes.OBJECT},
+)
 class BarcodeLookupView(APIView):
     """
     GET /api/v1/items/barcode/<barcode>/

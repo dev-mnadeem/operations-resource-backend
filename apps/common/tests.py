@@ -90,6 +90,21 @@ class SnapshotScopeTests(TestCase):
         )
         self.assertIn(response.status_code, (401, 403))
 
+    def test_the_openapi_schema_lists_every_endpoint(self):
+        self.client.force_login(make_user())
+        response = self.client.get(reverse("api-schema"), {"format": "json"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            sorted(response.json()["paths"]),
+            [
+                "/api/v1/items/barcode/{barcode}/",
+                "/api/v1/ping/",
+                "/api/v1/replenishment/advice/",
+                "/api/v1/schema/",
+                "/api/v1/snapshot/",
+            ],
+        )
+
     def test_ping_is_public_and_uncached(self):
         response = self.client.get(reverse("common:ping"))
         self.assertEqual(response.json(), {"ok": True})
