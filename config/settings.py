@@ -354,17 +354,23 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# Email Notification Configuration
-EMAIL_BACKEND = os.getenv(
+# Email notifications. Django 6.1 replaces the EMAIL_* settings with MAILERS;
+# the environment variables keep their old names.
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "")
+_email_backend = os.getenv(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "")
-EMAIL_HOST = os.getenv("EMAIL_HOST", "")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes")
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() in ("true", "1", "yes")
+_default_mailer = {"BACKEND": _email_backend}
+if _email_backend == "django.core.mail.backends.smtp.EmailBackend":
+    _default_mailer["OPTIONS"] = {
+        "host": os.getenv("EMAIL_HOST", ""),
+        "port": int(os.getenv("EMAIL_PORT", "587")),
+        "username": os.getenv("EMAIL_HOST_USER", ""),
+        "password": os.getenv("EMAIL_HOST_PASSWORD", ""),
+        "use_tls": os.getenv("EMAIL_USE_TLS", "True").lower() in ("true", "1", "yes"),
+        "use_ssl": os.getenv("EMAIL_USE_SSL", "False").lower() in ("true", "1", "yes"),
+    }
+MAILERS = {"default": _default_mailer}
 
 # Logging — stdout so Heroku log drain forwards to Papertrail automatically
 LOGGING = {

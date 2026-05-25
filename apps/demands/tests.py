@@ -1,6 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from django.core import mail
 from django.test import TestCase
 from django.utils import timezone
 
@@ -69,6 +70,12 @@ class DemandNotificationTests(TestCase):
     def recipients(self, kind):
         return set(
             Notification.objects.filter(type=kind).values_list("user_id", flat=True)
+        )
+
+    def test_a_branch_managers_demand_is_emailed_to_purchasers(self):
+        self.assertEqual(
+            sorted(m.to[0] for m in mail.outbox),
+            sorted([self.purchaser.email, self.other_purchaser.email]),
         )
 
     def test_a_new_demand_reaches_admins_and_the_branchs_purchasers(self):
