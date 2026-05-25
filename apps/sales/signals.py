@@ -1,5 +1,7 @@
 import logging
 
+from django.db import transaction
+from django.db.models import F
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -34,20 +36,22 @@ def reduce_inventory_on_sale(sender, instance, created, **kwargs):  # noqa: ARG0
         )
         return
 
-    for bom_item in bom.items.all():
-        # Apply conversion factor: BOM qty × factor = qty in inventory's base unit
-        base_qty = (
-            bom_item.quantity * bom_item.conversion_factor * instance.quantity_sold
-        )
-        branch_inv, _ = BranchInventory.objects.get_or_create(
-            branch=instance.branch,
-            item=bom_item.inventory_item,
-        )
-        branch_inv.quantity -= base_qty
-        branch_inv.save(update_fields=["quantity"])
+    with transaction.atomic():
+        for bom_item in bom.items.all():
+            # BOM qty x factor = qty in the inventory item's base unit
+            base_qty = (
+                bom_item.quantity * bom_item.conversion_factor * instance.quantity_sold
+            )
+            BranchInventory.objects.get_or_create(
+                branch=instance.branch, item=bom_item.inventory_item
+            )
+            # Imports can create sales concurrently; update in SQL, not Python.
+            BranchInventory.objects.filter(
+                branch=instance.branch, item=bom_item.inventory_item
+            ).update(quantity=F("quantity") - base_qty)
 
-        InventoryConsumption.objects.create(
-            inventory_item=bom_item.inventory_item,
-            sales_transaction=instance,
-            quantity_consumed=base_qty,
-        )
+            InventoryConsumption.objects.create(
+                inventory_item=bom_item.inventory_item,
+                sales_transaction=instance,
+                quantity_consumed=base_qty,
+            )

@@ -58,7 +58,12 @@ def apply_stock_adjustment(instance, created, **_kwargs):
     if instance.adjustment_type == StockAdjustment.ADJUST_DECREASE:
         delta = -delta
 
+    # The row may not exist yet (e.g. an item created after the warehouse);
+    # a bare .update() would then drop the adjustment without a trace.
     if instance.branch_id:
+        BranchInventory.objects.get_or_create(
+            branch_id=instance.branch_id, item=instance.inventory_item
+        )
         BranchInventory.objects.filter(
             branch_id=instance.branch_id,
             item=instance.inventory_item,
@@ -67,6 +72,9 @@ def apply_stock_adjustment(instance, created, **_kwargs):
     elif instance.warehouse_id:
         from apps.warehouse.models import WarehouseInventory
 
+        WarehouseInventory.objects.get_or_create(
+            warehouse_id=instance.warehouse_id, inventory_item=instance.inventory_item
+        )
         WarehouseInventory.objects.filter(
             warehouse_id=instance.warehouse_id,
             inventory_item=instance.inventory_item,

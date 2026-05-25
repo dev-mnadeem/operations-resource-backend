@@ -3,8 +3,15 @@ from decimal import Decimal
 
 from django.test import TestCase
 
-from apps.common.testing import make_branch, make_item, make_user
-from apps.inventory.models import BranchInventory, StockCycleCount
+from apps.common.testing import (
+    branch_qty,
+    make_branch,
+    make_item,
+    make_user,
+    make_warehouse,
+    warehouse_qty,
+)
+from apps.inventory.models import BranchInventory, StockAdjustment, StockCycleCount
 from apps.purchases.models import Notification
 
 
@@ -53,3 +60,31 @@ class CycleCountVarianceTests(TestCase):
     def test_a_scheduled_count_raises_nothing(self):
         self.count.save()
         self.assertFalse(self.alerts().exists())
+
+
+class StockAdjustmentTests(TestCase):
+    def setUp(self):
+        self.user = make_user("Admin")
+
+    def adjust(self, kind, qty, **where):
+        StockAdjustment.objects.create(
+            inventory_item=self.item,
+            adjustment_type=kind,
+            quantity=Decimal(qty),
+            reason="test",
+            user=self.user,
+            **where,
+        )
+
+    def test_branch_increase_and_decrease(self):
+        branch = make_branch()
+        self.item = make_item()
+        self.adjust(StockAdjustment.ADJUST_INCREASE, "5", branch=branch)
+        self.adjust(StockAdjustment.ADJUST_DECREASE, "2", branch=branch)
+        self.assertEqual(branch_qty(branch, self.item), Decimal("3"))
+
+    def test_a_warehouse_adjustment_for_a_newer_item_is_not_lost(self):
+        warehouse = make_warehouse()
+        self.item = make_item()  # created after the warehouse: no stock row yet
+        self.adjust(StockAdjustment.ADJUST_INCREASE, "4", warehouse=warehouse)
+        self.assertEqual(warehouse_qty(warehouse, self.item), Decimal("4"))

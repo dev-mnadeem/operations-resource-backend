@@ -2,6 +2,7 @@
 Signals for warehouse app automation.
 """
 
+from django.db.models import F
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
@@ -49,23 +50,20 @@ def update_warehouse_inventory_on_transaction(instance, created, **_kwargs):
 
     from .models import WarehouseInventory
 
-    # Get or create WarehouseInventory record
-    warehouse_inventory, _ = WarehouseInventory.objects.get_or_create(
+    WarehouseInventory.objects.get_or_create(
         warehouse=instance.warehouse,
         inventory_item=instance.inventory_item,
         defaults={"quantity": Decimal("0")},
     )
 
-    # Update quantity based on transaction type
-    if instance.transaction_type == WarehouseTransaction.TRANSACTION_INWARD:
-        warehouse_inventory.quantity += instance.quantity
-    elif instance.transaction_type == WarehouseTransaction.TRANSACTION_OUTWARD:
-        warehouse_inventory.quantity -= instance.quantity
-    elif instance.transaction_type == WarehouseTransaction.TRANSACTION_ADJUSTMENT:
-        # For adjustments, quantity can be positive (increase) or negative (decrease)
-        warehouse_inventory.quantity += instance.quantity
-
-    warehouse_inventory.save()
+    if instance.transaction_type == WarehouseTransaction.TRANSACTION_OUTWARD:
+        delta = -instance.quantity
+    else:
+        # INWARD adds; ADJUSTMENT carries its own sign.
+        delta = instance.quantity
+    WarehouseInventory.objects.filter(
+        warehouse=instance.warehouse, inventory_item=instance.inventory_item
+    ).update(quantity=F("quantity") + delta)
 
 
 @receiver(pre_save, sender=WarehouseRequest)

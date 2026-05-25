@@ -112,6 +112,11 @@ else:
         }
     }
 
+# Admin actions and the custom receive/dispatch views write several rows
+# (stock, line items, status). Wrap each request so a failure part-way
+# through cannot leave stock moved without the matching status change.
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
