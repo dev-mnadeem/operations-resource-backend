@@ -1,74 +1,62 @@
+# Production-like stack: gunicorn, Celery worker and beat, Postgres, Redis.
+# Code is baked into the image, so rebuild (`docker compose up -d --build`)
+# after changes. docker-compose.dev.yml is the live-reload variant.
+
+x-app: &app
+  build: .
+  restart: unless-stopped
+  env_file: .env
+  environment: &app-env
+    DB_ENGINE: django.db.backends.postgresql
+    DB_HOST: db
+    DB_PORT: "5432"
+    CELERY_BROKER_URL: redis://redis:6379/0
+    CELERY_RESULT_BACKEND: redis://redis:6379/0
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
 services:
   db:
     image: postgres:16
     restart: unless-stopped
-    env_file: .env
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  web:
-    build: .
-    restart: unless-stopped
-    depends_on:
-      - db
-    env_file: .env
-    environment:
-      SECRET_KEY: ${SECRET_KEY}
-      DEBUG: ${DEBUG:-1}
-      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost,web}
-      DB_ENGINE: ${DB_ENGINE:-django.db.backends.postgresql}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: db
-      DB_PORT: ${DB_PORT:-5432}
-    ports:
-      - "${WEB_PORT:-8500}:8000"
-    # Uncomment to mount source for live reload during development:
-    volumes:
-      - .:/app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7
     restart: unless-stopped
 
-  celery_worker:
-    build: .
-    restart: unless-stopped
-    depends_on:
-      - db
-      - redis
-    env_file: .env
-    command: uv run celery -A config worker -l INFO
+  web:
+    <<: *app
     environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-      # Copying necessary vars just in case they aren't fully pulled from env_file when running worker
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_HOST: db
-    volumes:
-      - .:/app
+      <<: *app-env
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost}
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput -v 0 &&
+             gunicorn config.wsgi --bind 0.0.0.0:8000 --workers 3 --access-logfile -"
+    ports:
+      - "${WEB_PORT:-8500}:8000"
+
+  celery_worker:
+    <<: *app
+    command: celery -A config worker -l INFO
 
   celery_beat:
-    build: .
-    restart: unless-stopped
-    depends_on:
-      - db
-      - redis
-    env_file: .env
-    command: uv run celery -A config beat -l INFO
-    environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-    volumes:
-      - .:/app
+    <<: *app
+    command: celery -A config beat -l INFO --schedule /tmp/celerybeat-schedule
 
 volumes:
   postgres_data:
-

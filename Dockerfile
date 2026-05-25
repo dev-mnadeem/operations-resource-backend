@@ -1,33 +1,31 @@
 FROM python:3.12-slim
 
-# Prevent Python from writing .pyc files and buffer stdout/stderr
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PYTHONPATH="/app"
+    PYTHONPATH="/app" \
+    # Run tools from the project venv. `uv run` would also try to sync the
+    # dev dependency group, which this image deliberately leaves out.
+    PATH="/app/.venv/bin:$PATH" \
+    UV_NO_SYNC=1
 
 WORKDIR /app
 
-# System dependencies (ca-certificates for HTTPS, curl for debugging if needed)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --no-cache-dir "uv>=0.9,<1" \
+    && useradd --create-home --uid 1000 app
 
-# Install uv (project uses uv locally, keep the same workflow)
-RUN pip install --no-cache-dir uv
-
-# Copy dependency metadata first to leverage Docker layer caching
+# Dependencies first, so code changes don't invalidate this layer.
 COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-# Install project dependencies using uv (respects pyproject + lockfile)
-RUN uv sync --frozen --no-dev
+COPY --chown=app:app . .
+RUN chown app:app /app
 
-# Copy the rest of the application code
-COPY . .
-
+USER app
 EXPOSE 8000
 
-# Default command: run Django dev server inside the container
-CMD ["uv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]
-
+# Development default; docker-compose.yml runs gunicorn instead.
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

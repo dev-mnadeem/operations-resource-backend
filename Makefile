@@ -129,16 +129,16 @@ docker-shell:
 	$(DC_DEV) exec web bash
 
 docker-migrate:
-	$(DC_DEV) exec web uv run python manage.py migrate
+	$(DC_DEV) exec web python manage.py migrate
 
 docker-superuser:
-	$(DC_DEV) exec web uv run python manage.py createsuperuser
+	$(DC_DEV) exec web python manage.py createsuperuser
 
 docker-seed:
-	$(DC_DEV) exec web uv run python manage.py seed_data
+	$(DC_DEV) exec web python manage.py seed_data
 
 docker-manage:
-	$(DC_DEV) exec web uv run python manage.py $(CMD)
+	$(DC_DEV) exec web python manage.py $(CMD)
 
 docker-setup:
-	$(DC_DEV) exec web uv run python manage.py setup_dev
+	$(DC_DEV) exec web python manage.py setup_dev

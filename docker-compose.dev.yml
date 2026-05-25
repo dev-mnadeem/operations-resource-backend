@@ -43,7 +43,7 @@ services:
       # Keep the container's site-packages separate so a local venv
       # (if present) doesn't shadow the installed dependencies.
       - /app/.venv
-    command: uv run python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8000
 
 volumes:
   postgres_data_dev:
