@@ -4,10 +4,13 @@ Signals for purchases app automation.
 
 from decimal import Decimal
 
+from django.db import transaction
+from django.db.models import F, Q
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
 
 from apps.demands.models import Demand
+from apps.permissions import ADMIN_GROUP
 
 from .models import GoodsReceipt, GoodsReceiptItem, PurchaseOrder
 from .notification_channels import send_email_notifications
@@ -38,45 +41,100 @@ def update_receipt_total_quantity(instance, **_kwargs):
     receipt.save(update_fields=["total_received_quantity"])
 
 
+def _credit_branch_stock(goods_receipt, inventory_item_id, delta):
+    from apps.inventory.models import BranchInventory
+
+    branch = goods_receipt.demand.branch
+    BranchInventory.objects.get_or_create(branch=branch, item_id=inventory_item_id)
+    BranchInventory.objects.filter(branch=branch, item_id=inventory_item_id).update(
+        quantity=F("quantity") + delta
+    )
+
+
 @receiver(pre_save, sender=GoodsReceiptItem)
 def capture_old_received_qty(instance, **_kwargs):
-    """Capture old received quantity to calculate delta."""
-    if instance.pk:
-        old_instance = GoodsReceiptItem.objects.get(pk=instance.pk)
-        instance._old_received_quantity = old_instance.received_quantity
-    else:
-        instance._old_received_quantity = Decimal("0")
+    """Remember what this line had already credited, to apply only the change."""
+    old = (
+        GoodsReceiptItem.objects.filter(pk=instance.pk)
+        .values("received_quantity", "inventory_item_id")
+        .first()
+        if instance.pk
+        else None
+    )
+    instance._old_received_quantity = (
+        (old["received_quantity"] or Decimal("0")) if old else Decimal("0")
+    )
+    instance._old_inventory_item_id = (
+        old["inventory_item_id"] if old else instance.inventory_item_id
+    )
 
 
 @receiver(post_save, sender=GoodsReceiptItem)
 def update_inventory_on_receipt_item_save(instance, **_kwargs):
-    """Update BranchInventory when GoodsReceiptItem is saved."""
+    """Credit the receiving branch with what this line received."""
     old_qty = getattr(instance, "_old_received_quantity", Decimal("0"))
+    old_item_id = getattr(
+        instance, "_old_inventory_item_id", instance.inventory_item_id
+    )
     new_qty = instance.received_quantity or Decimal("0")
-    delta = new_qty - old_qty
 
-    if delta != Decimal("0"):
-        from apps.inventory.models import BranchInventory
+    with transaction.atomic():
+        if old_item_id != instance.inventory_item_id:
+            # The line was re-pointed at another item: take the old credit back.
+            if old_qty:
+                _credit_branch_stock(instance.goods_receipt, old_item_id, -old_qty)
+            old_qty = Decimal("0")
+        if new_qty != old_qty:
+            _credit_branch_stock(
+                instance.goods_receipt, instance.inventory_item_id, new_qty - old_qty
+            )
 
-        branch = instance.goods_receipt.demand.branch
-        branch_inv, _ = BranchInventory.objects.get_or_create(
-            branch=branch,
-            item=instance.inventory_item,
+
+@receiver(post_delete, sender=GoodsReceiptItem)
+def reverse_inventory_on_receipt_item_delete(instance, **_kwargs):
+    """A deleted line no longer counts as received stock."""
+    if instance.received_quantity:
+        _credit_branch_stock(
+            instance.goods_receipt,
+            instance.inventory_item_id,
+            -instance.received_quantity,
         )
-        branch_inv.quantity += delta
-        branch_inv.save(update_fields=["quantity"])
+
+
+def _admin_user_ids(User):
+    """Superusers and Admin-group members, each once."""
+    return set(
+        User.objects.filter(
+            Q(is_superuser=True) | Q(groups__name=ADMIN_GROUP)
+        ).values_list("id", flat=True)
+    )
+
+
+@receiver(pre_save, sender=GoodsReceipt)
+def capture_old_receipt_status(instance, **_kwargs):
+    instance._old_status = (
+        GoodsReceipt.objects.filter(pk=instance.pk)
+        .values_list("status", flat=True)
+        .first()
+        if instance.pk
+        else None
+    )
 
 
 @receiver(post_save, sender=GoodsReceipt)
 def notify_on_receipt_discrepancy(instance, **_kwargs):
     """
-    When a GoodsReceipt is marked completed or partial and any item has non-zero variance,
-    notify all Purchasers and Admins of the discrepancy.
+    When a GoodsReceipt becomes completed or partial and any item has non-zero
+    variance, notify all Purchasers and Admins of the discrepancy.
     """
     if instance.status not in (
         GoodsReceipt.STATUS_COMPLETED,
         GoodsReceipt.STATUS_PARTIAL,
     ):
+        return
+    # Every line save also re-saves the receipt to refresh its total; only a
+    # change of status is a new event worth telling people about.
+    if getattr(instance, "_old_status", None) == instance.status:
         return
 
     from django.contrib.auth import get_user_model
@@ -342,9 +400,6 @@ def notify_admin_on_purchase_order_creation(instance, created, **_kwargs):
         return
 
     from django.contrib.auth import get_user_model
-    from django.db.models import Q
-
-    from apps.permissions import ADMIN_GROUP
 
     from .models import Notification
 
@@ -354,9 +409,7 @@ def notify_admin_on_purchase_order_creation(instance, created, **_kwargs):
         f"New Purchase Order #{instance.id} created by {instance.created_by.username}."
     )
 
-    admin_ids = User.objects.filter(
-        Q(is_superuser=True) | Q(groups__name=ADMIN_GROUP)
-    ).values_list("id", flat=True)
+    admin_ids = _admin_user_ids(User)
 
     for uid in admin_ids:
         Notification.objects.create(
@@ -374,9 +427,6 @@ def notify_admin_on_goods_receipt_creation(instance, created, **_kwargs):
         return
 
     from django.contrib.auth import get_user_model
-    from django.db.models import Q
-
-    from apps.permissions import ADMIN_GROUP
 
     from .models import Notification
 
@@ -384,9 +434,7 @@ def notify_admin_on_goods_receipt_creation(instance, created, **_kwargs):
 
     message = f"New Goods Receipt #{instance.id} created for demand #{instance.demand_id} by {instance.receiver.username}."
 
-    admin_ids = User.objects.filter(
-        Q(is_superuser=True) | Q(groups__name=ADMIN_GROUP)
-    ).values_list("id", flat=True)
+    admin_ids = _admin_user_ids(User)
 
     for uid in admin_ids:
         Notification.objects.create(

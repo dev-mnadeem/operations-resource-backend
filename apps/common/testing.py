@@ -4,6 +4,7 @@ from decimal import Decimal
 from itertools import count
 
 from django.contrib.auth.models import Group
+from django.test import override_settings
 
 from apps.branch.models import Branch
 from apps.inventory.models import BranchInventory, InventoryItem, UnitOfMeasure
@@ -11,6 +12,17 @@ from apps.users.models import User
 from apps.warehouse.models import Warehouse, WarehouseInventory
 
 _seq = count(1)
+
+#: Admin pages resolve static URLs; the manifest storage used in production
+#: needs collectstatic first, so tests that render pages use the plain one.
+PLAIN_STATIC_FILES = override_settings(
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.InMemoryStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
+    }
+)
 
 
 def make_user(*groups, **fields):

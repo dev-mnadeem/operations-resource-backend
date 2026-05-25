@@ -288,8 +288,10 @@ class GoodsReceiptAdmin(RowActionButtonsMixin, admin.ModelAdmin):
             .get_queryset(request)
             .select_related("demand", "receiver", "demand__branch")
         )
-        if is_admin(request.user) or is_branch_manager(request.user):
+        if is_admin(request.user):
             return qs
+        # Branch staff only see their own branch's receipts. This queryset also
+        # guards the receive view, which credits stock to the receipt's branch.
         if request.user.branch_id:
             return qs.filter(demand__branch_id=request.user.branch_id)
         return qs.none()
