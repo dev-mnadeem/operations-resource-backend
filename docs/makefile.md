@@ -77,7 +77,7 @@ make seed-history   # optional
 | `make lint` | Run `ruff check` — report issues without changing files |
 | `make lint-fix` | Run `ruff check --fix` — auto-fix safe issues |
 | `make format` | Run `ruff format` — reformat all Python files |
-| `make format-check` | Check formatting without making changes (used in CI) |
+| `make format-check` | Check formatting without changing files |
 | `make fmt` | `lint-fix` + `format` in one step — use this before committing |
 
 ### Testing
