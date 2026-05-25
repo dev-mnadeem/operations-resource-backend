@@ -1,12 +1,16 @@
+import tempfile
 from decimal import Decimal
+from email.message import EmailMessage
+from pathlib import Path
 
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 from apps.common.testing import branch_qty, make_branch, make_item, set_branch_qty
 from apps.inventory.models import BOM, BOMItem
 from apps.products.models import Product
 from apps.sales.models import InventoryConsumption, SalesTransaction
+from apps.sales.tasks import save_sales_attachment
 
 
 class SaleConsumptionTests(TestCase):
@@ -43,3 +47,32 @@ class SaleConsumptionTests(TestCase):
 
     def test_the_total_is_quantity_times_the_product_price(self):
         self.assertEqual(self.sell(2).total_amount, Decimal("3000"))
+
+
+class SalesAttachmentTests(SimpleTestCase):
+    def attachment(self, filename, payload=b"sheet"):
+        part = EmailMessage()
+        part.add_attachment(
+            payload, maintype="application", subtype="vnd.ms-excel", filename=filename
+        )
+        return next(part.iter_attachments())
+
+    def test_a_hostile_name_cannot_leave_the_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = save_sales_attachment(
+                self.attachment("../../evil.xls"), directory=directory
+            )
+            self.assertEqual(path.parent, Path(directory))
+            self.assertEqual(path.read_bytes(), b"sheet")
+
+    def test_encoded_names_are_decoded_before_the_extension_check(self):
+        part = self.attachment("placeholder.xls")
+        part.replace_header(
+            "Content-Disposition",
+            'attachment; filename="=?utf-8?b?' + "c2FsZXMueGxz" + '?="',
+        )  # base64 of "sales.xls"
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertIsNotNone(save_sales_attachment(part, directory=directory))
+
+    def test_other_attachments_are_ignored(self):
+        self.assertIsNone(save_sales_attachment(self.attachment("notes.pdf")))

@@ -2,6 +2,7 @@ import email
 import imaplib
 import logging
 import os
+import tempfile
 from decimal import Decimal
 from email.header import decode_header
 from pathlib import Path
@@ -16,6 +17,30 @@ from apps.products.models import Product
 from .models import SalesTransaction
 
 logger = logging.getLogger(__name__)
+
+
+def save_sales_attachment(part, directory=None):
+    """
+    Write an .xls attachment to a fresh temp file and return its path.
+
+    The sender controls the attachment name, so it is only used to decide
+    whether this is a sales sheet. The file on disk gets a generated name;
+    the old code joined the name onto /tmp, which let "../" escape it.
+    """
+    raw_name = part.get_filename()
+    if not raw_name:
+        return None
+    name, charset = decode_header(raw_name)[0]
+    if isinstance(name, bytes):
+        name = name.decode(charset or "utf-8", errors="replace")
+    if not name.lower().endswith(".xls"):
+        return None
+
+    fd, path = tempfile.mkstemp(prefix="sales-", suffix=".xls", dir=directory)
+    with os.fdopen(fd, "wb") as out:
+        out.write(part.get_payload(decode=True) or b"")
+    logger.info("Downloaded sales attachment %r to %s", name, path)
+    return Path(path)
 
 
 @shared_task
@@ -50,23 +75,9 @@ def fetch_and_process_sales_emails():
                             if part.get("Content-Disposition") is None:
                                 continue
 
-                            filename = part.get_filename()
-                            if filename and filename.endswith(".xls"):
-                                decoded_filename = decode_header(filename)[0][0]
-                                if isinstance(decoded_filename, bytes):
-                                    decoded_filename = decoded_filename.decode()
-
-                                # Save attachment
-                                file_path = f"/tmp/{decoded_filename}"
-                                with Path(file_path).open("wb") as f:
-                                    f.write(part.get_payload(decode=True))
-
-                                logger.info(
-                                    f"Downloaded sales attachment: {decoded_filename}"
-                                )
-
-                                # Process the excel file asynchronously via Celery
-                                process_sales_excel.delay(file_path)
+                            file_path = save_sales_attachment(part)
+                            if file_path:
+                                process_sales_excel.delay(str(file_path))
 
         mail.logout()
     except Exception as e:
