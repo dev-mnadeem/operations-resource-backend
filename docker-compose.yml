@@ -1,0 +1,76 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file: .env
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: ${DEBUG:-1}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost,web}
+      DB_ENGINE: ${DB_ENGINE:-django.db.backends.postgresql}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-5432}
+    ports:
+      - "8000:8000"
+    # Uncomment to mount source for live reload during development:
+    volumes:
+      - .:/app
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  celery_worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    command: uv run celery -A config worker -l INFO
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      # Copying necessary vars just in case they aren't fully pulled from env_file when running worker
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+    volumes:
+      - .:/app
+
+  celery_beat:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    env_file: .env
+    command: uv run celery -A config beat -l INFO
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - .:/app
+
+volumes:
+  postgres_data:
+
