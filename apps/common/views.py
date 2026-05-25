@@ -47,7 +47,10 @@ class SnapshotView(APIView):
             except (ValueError, TypeError):
                 pass  # ignore bad timestamp; fall back to full snapshot
 
+        # The fields are all computed from the request, but the serializer still
+        # needs an instance: with None, DRF returns initial data, which leaves
+        # out read-only fields and so produced an empty `{}` snapshot.
         serializer = SnapshotSerializer(
-            None, context={"request": request, "since": since}
+            request.user, context={"request": request, "since": since}
         )
         return Response(serializer.data)

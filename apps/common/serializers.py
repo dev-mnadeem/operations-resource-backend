@@ -3,7 +3,7 @@ from rest_framework import serializers
 
 from apps.branch.models import Branch
 from apps.inventory.models import BranchInventory, InventoryItem
-from apps.permissions import is_purchaser
+from apps.permissions import is_admin, visible_branch_codes
 from apps.warehouse.models import Warehouse
 
 
@@ -48,18 +48,16 @@ class SnapshotSerializer(serializers.Serializer):
         ]
 
     def get_stock(self, obj):  # noqa: ARG002
-        """Return branch stock levels scoped to the user's branch (for offline lookups)."""
+        """Branch stock for the branches this user can see (for offline lookups)."""
         user = self.context["request"].user
         since = self.context.get("since")
 
         if not user.has_perm("inventory.view_branchinventory"):
             return []
 
-        qs = BranchInventory.objects.select_related("item", "branch").all()
-        if not user.is_superuser and user.branch_id:
-            qs = qs.filter(branch_id=user.branch_id)
-        elif not user.is_superuser:
-            return []
+        qs = BranchInventory.objects.select_related("item", "branch").filter(
+            branch__in=visible_branch_codes(user)
+        )
 
         if since:
             qs = qs.filter(updated_at__gt=since)
@@ -80,21 +78,7 @@ class SnapshotSerializer(serializers.Serializer):
         if not user.has_perm("branch.view_branch"):
             return []
 
-        qs = Branch.objects.all()
-        if not user.is_superuser:
-            if is_purchaser(user):
-                branch_ids = set(user.purchaser_branches.values_list("pk", flat=True))
-                if user.branch_id:
-                    branch_ids.add(user.branch_id)
-                if branch_ids:
-                    qs = qs.filter(branch_code__in=branch_ids)
-                else:
-                    return []
-            elif user.branch_id:
-                qs = qs.filter(branch_code=user.branch_id)
-            else:
-                return []
-
+        qs = Branch.objects.filter(pk__in=visible_branch_codes(user))
         return [{"id": b.pk, "name": b.name, "code": b.branch_code} for b in qs]
 
     def get_warehouses(self, obj):  # noqa: ARG002
@@ -103,7 +87,7 @@ class SnapshotSerializer(serializers.Serializer):
             return []
 
         qs = Warehouse.objects.all()
-        if not user.is_superuser and user.warehouse_id:
+        if not is_admin(user) and user.warehouse_id:
             qs = qs.filter(id=user.warehouse_id)
 
         return [{"id": w.id, "name": w.name} for w in qs]
