@@ -7,8 +7,10 @@
 ```bash
 make run          # start dev server
 make superuser    # create admin user
-make seed-data    # seed branches, items, warehouses
+make seed-data    # seed a branch, demo users, items and products
 ```
+
+`seed_data` creates no warehouse; add one under **Warehouse → Warehouses** before testing 2.7 and 2.8.
 
 Create test users in **Auth → Users**:
 - `branch_mgr` → assign to "Branch Manager" group + a Branch

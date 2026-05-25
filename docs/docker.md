@@ -6,10 +6,10 @@ There are two compose files:
 
 | File | Purpose |
 |---|---|
-| `docker-compose.yml` | Base / production-like. No volume mount. Requires a rebuild to pick up code changes. |
+| `docker-compose.yml` | Production-like: gunicorn, Celery worker and beat, Postgres, Redis. Migrates and collects static files on start. No source mount, so rebuild (`docker compose up -d --build`) to pick up code changes. Serves on `WEB_PORT` (default 8500). |
 | `docker-compose.dev.yml` | **Development**. Mounts source code into the container so Django's auto-reloader reflects every file change instantly — no rebuild needed. |
 
-**Use `docker-compose.dev.yml` for all local development.**
+**Use `docker-compose.dev.yml` for local development.** It runs only Postgres and the Django dev server; start the production-like file when you need Celery.
 
 ---
 
@@ -21,17 +21,15 @@ There are two compose files:
 cp .env.example .env
 ```
 
-Open `.env` and fill in:
+Open `.env` and fill in at least:
 
 ```env
-SECRET_KEY=any-random-string-for-local-dev
-DEBUG=True
-DB_NAME=arcadian_erp
-DB_USER=erp_user
+SECRET_KEY=any-random-string-for-local-dev   # python3 scripts/generate_secret_key.py
 DB_PASSWORD=change-me
+DEV_ADMIN_PASSWORD=pick-one                  # optional; generated and printed if blank
 ```
 
-> `DB_HOST` is automatically overridden to `db` (the Postgres service name) inside the dev compose file, so leave it as `127.0.0.1` in `.env` — it only matters when running outside Docker.
+> `DB_HOST` is overridden to `db` (the Postgres service) inside both compose files, so leave it as `127.0.0.1` in `.env`; it only matters when running outside Docker.
 
 ### 2. Build the image
 
@@ -54,27 +52,20 @@ This starts Postgres and the Django dev server. Django waits for Postgres to be 
 The server is available at **http://localhost:8000**
 Postgres is exposed on **localhost:5433** (to avoid clashing with a local Postgres instance).
 
-### 4. Apply migrations
+### 4. Set up the database and demo data
 
 In a second terminal (while services are running):
 
 ```bash
-make docker-migrate
+make docker-setup          # migrate, groups, superuser, seed data, demo transactions
+make docker-seed-history   # optional: 120 days of sales for replenishment advice
 ```
 
-### 5. Create a superuser
+`docker-setup` prints the admin password unless `DEV_ADMIN_PASSWORD` is set.
 
-```bash
-make docker-superuser
-```
+Admin panel: **http://localhost:8000/admin** (user `admin`)
 
-Admin panel: **http://localhost:8000/admin**
-
-### 6. (Optional) Seed demo data
-
-```bash
-make docker-seed
-```
+To create another superuser instead: `make docker-superuser`.
 
 ---
 
@@ -139,10 +130,9 @@ All other changes (Python files, templates, static files, migrations) are picked
 To wipe the Postgres volume and start fresh:
 
 ```bash
-make docker-down
-docker volume rm arcadian-erp_postgres_data_dev
-make docker-up
-make docker-migrate
+docker compose -f docker-compose.dev.yml down -v
+make docker-up-d
+make docker-setup
 ```
 
 ---
