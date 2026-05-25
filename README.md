@@ -194,7 +194,7 @@ Defaults are a 5-day lead time, a 95% service level and 90 days of history, all 
 
 - **Stock moves on transitions, not on saves.** Transfer, receipt, cycle-count and warehouse-request handlers compare against the status captured in `pre_save`. Re-saving a received transfer to fix its notes does not credit the destination again.
 - **Stock writes happen in SQL.** Signals update quantities with `F()` expressions, so the Celery import and the admin cannot overwrite each other's changes. `ATOMIC_REQUESTS` wraps each request, so a failed dispatch or receive leaves no half-moved stock.
-- **Offline replays are idempotent.** `IdempotencyMiddleware` stores the first successful response to a POST that carries `X-Client-Request-ID`, redirects included, and replays it for retries. It uses Django's cache. With several gunicorn workers, configure a shared cache such as Redis, or retries can reach a worker that never saw the first request.
+- **Offline replays are idempotent.** `IdempotencyMiddleware` stores the first successful response to a POST that carries `X-Client-Request-ID`, redirects included, and replays it for retries. Responses live in Django's cache, which `docker-compose.yml` points at Redis through `CACHE_URL`, so every gunicorn worker sees them. Without `CACHE_URL`, Django's per-process memory cache is used. That is fine under `runserver`, but not with several workers.
 - **Replenishment is statistics, not a model.** The quantity it answers has a closed form, and the z-scores are a table in the code, so every number can be checked by hand.
 
 ## Configuration
@@ -208,6 +208,7 @@ Defaults are a 5-day lead time, a 95% service level and 90 days of history, all 
 | `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD` | Turn on the sales email import; blank means the beat job logs and skips |
 | `CLOUDINARY_*` | All three set means uploads go to Cloudinary; otherwise local `media/` |
 | `EMAIL_BACKEND`, `EMAIL_HOST`, … | Notification email, configured as Django 6.1 `MAILERS`; the console backend by default |
+| `CACHE_URL` | Redis cache shared by all workers (set by `docker-compose.yml`); blank means per-process memory |
 | `DEV_ADMIN_PASSWORD`, `DEV_SEED_PASSWORD` | Passwords for the demo accounts; generated and printed when blank |
 
 ## Tests and linting
