@@ -28,7 +28,9 @@ def get_automated_demand_suggestions(branch_id):
     consumption_data = (
         InventoryConsumption.objects.filter(
             sales_transaction__branch_id=branch_id,
-            timestamp__gte=last_30_days,
+            # The sale's date, not `timestamp`: that is when the row was
+            # written, so back-filled or bulk-imported history looked recent.
+            sales_transaction__occurred_at__gte=last_30_days,
         )
         .values("inventory_item_id")
         .annotate(total_consumed=Sum("quantity_consumed"))
