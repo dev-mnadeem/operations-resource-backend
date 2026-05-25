@@ -17,9 +17,8 @@ help:
 	@echo "  make shell             Django shell"
 	@echo "  make superuser         Create superuser"
 	@echo "  make create-groups     Create default role groups (Admin, Purchaser, etc.)"
-	@echo "  make create-inventory  Create default inventory UOMs, Categories, and Items"
-	@echo "  make create-products   Create default product Categories and Products"
-	@echo "  make seed-data         Seed the database with mock transactions (sales, purchases)"
+	@echo "  make seed-data         Seed branches, demo users, units, inventory items and products"
+	@echo "  make seed-history      Generate 120 days of sales so replenishment advice has data"
 	@echo "  make collectstatic     Collect static files"
 	@echo "  make test              Run tests"
 	@echo "  make app               Create a new Django app"
@@ -43,7 +42,8 @@ help:
 	@echo "  make docker-shell      Open a bash shell inside the web container"
 	@echo "  make docker-migrate    Run migrations inside the web container"
 	@echo "  make docker-superuser  Create superuser inside the web container"
-	@echo "  make docker-seed       Seed the database inside the web container"
+	@echo "  make docker-seed       Seed reference data inside the web container"
+	@echo "  make docker-seed-history  Seed replenishment sales history inside the web container"
 	@echo "  make docker-manage     Run any manage.py command: make docker-manage CMD='showmigrations'"
 	@echo ""
 
@@ -97,11 +97,8 @@ flush:
 seed-data:
 	$(MANAGE) seed_data
 
-create-inventory:
-	$(MANAGE) create_default_inventory
-
-create-products:
-	$(MANAGE) create_default_products
+seed-history:
+	$(MANAGE) seed_demand_history
 
 # ── First-time setup ──────────────────────────────────────────────────────────
 
@@ -136,6 +133,9 @@ docker-superuser:
 
 docker-seed:
 	$(DC_DEV) exec web python manage.py seed_data
+
+docker-seed-history:
+	$(DC_DEV) exec web python manage.py seed_demand_history
 
 docker-manage:
 	$(DC_DEV) exec web python manage.py $(CMD)

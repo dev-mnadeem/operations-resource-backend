@@ -27,7 +27,7 @@ Run `make` (no target) to print a quick summary. Full reference below.
 
 ## Local development
 
-These commands run directly on your machine using `uv run`.
+These commands run directly on your machine through `uv run` (after `uv sync`).
 
 ### Server
 
@@ -49,20 +49,18 @@ These commands run directly on your machine using `uv run`.
 | Command | Description |
 |---|---|
 | `make superuser` | Interactive prompt to create a Django admin user |
-| `make create-groups` | Create default role groups (Admin, Purchaser, etc.) |
-| `make create-inventory` | Seed default Units of Measure, categories, and items |
-| `make create-products` | Seed default product categories and products |
-| `make seed-data` | Seed mock transactions (sales, purchases, demands) — run after the three commands above |
+| `make create-groups` | Create the role groups (Admin, Purchaser, Branch Manager, Warehouse Manager) and their permissions |
+| `make seed-data` | Seed branches, demo users, units, inventory items and products (`seed_data`) |
+| `make seed-history` | Generate 120 days of sales and consumption so replenishment advice has data (`seed_demand_history`) |
 | `make collectstatic` | Collect static files into `STATIC_ROOT` |
 
-Recommended first-run order:
+`make setup-first-time` covers everything except `seed-history`. To do it by hand:
 ```bash
 make migrate
-make superuser
 make create-groups
-make create-inventory
-make create-products
+make superuser
 make seed-data
+make seed-history   # optional
 ```
 
 ### Django shell & apps
@@ -112,6 +110,7 @@ These commands wrap `docker compose -f docker-compose.dev.yml`. See [`docs/docke
 | `make docker-migrate` | Run `manage.py migrate` inside the container |
 | `make docker-superuser` | Run `manage.py createsuperuser` inside the container |
 | `make docker-seed` | Run `manage.py seed_data` inside the container |
+| `make docker-seed-history` | Run `manage.py seed_demand_history` inside the container |
 | `make docker-manage CMD="<cmd>"` | Run any `manage.py` command inside the container |
 
 **`docker-manage` examples:**
