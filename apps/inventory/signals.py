@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from apps.branch.models import Branch
@@ -73,14 +73,27 @@ def apply_stock_adjustment(instance, created, **_kwargs):
         ).update(quantity=models.F("quantity") + delta)
 
 
+@receiver(pre_save, sender=StockCycleCount)
+def remember_previous_cycle_count_status(instance, **_kwargs):
+    instance._previous_status = (
+        StockCycleCount.objects.filter(pk=instance.pk)
+        .values_list("status", flat=True)
+        .first()
+        if instance.pk
+        else None
+    )
+
+
 @receiver(post_save, sender=StockCycleCount)
 def notify_on_cycle_count_variance(instance, **_kwargs):
     """
-    When a StockCycleCount is completed with non-zero variance,
+    When a StockCycleCount becomes completed with non-zero variance,
     notify the Branch Manager for that branch and all Admins.
     """
     if instance.status != StockCycleCount.STATUS_COMPLETED:
         return
+    if getattr(instance, "_previous_status", None) == instance.status:
+        return  # already reported when it was completed
     if not instance.variance or instance.variance == 0:
         return
     if not instance.branch_id:

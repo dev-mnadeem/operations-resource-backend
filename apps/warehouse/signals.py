@@ -2,7 +2,7 @@
 Signals for warehouse app automation.
 """
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from .models import Warehouse, WarehouseRequest, WarehouseTransaction
@@ -68,6 +68,17 @@ def update_warehouse_inventory_on_transaction(instance, created, **_kwargs):
     warehouse_inventory.save()
 
 
+@receiver(pre_save, sender=WarehouseRequest)
+def remember_previous_request_status(instance, **_kwargs):
+    instance._previous_status = (
+        WarehouseRequest.objects.filter(pk=instance.pk)
+        .values_list("status", flat=True)
+        .first()
+        if instance.pk
+        else None
+    )
+
+
 @receiver(post_save, sender=WarehouseRequest)
 def notify_on_warehouse_request_status_change(instance, created, **_kwargs):
     """
@@ -99,9 +110,11 @@ def notify_on_warehouse_request_status_change(instance, created, **_kwargs):
                     )
 
         message_admin = f"New warehouse request #{instance.id} from branch {instance.branch.branch_code} to warehouse {instance.warehouse.name} created by {instance.requested_by.username}."
-        admin_ids = User.objects.filter(
-            Q(is_superuser=True) | Q(groups__name=ADMIN_GROUP)
-        ).values_list("id", flat=True)
+        admin_ids = set(
+            User.objects.filter(
+                Q(is_superuser=True) | Q(groups__name=ADMIN_GROUP)
+            ).values_list("id", flat=True)
+        )
 
         for uid in admin_ids:
             Notification.objects.create(
@@ -111,8 +124,7 @@ def notify_on_warehouse_request_status_change(instance, created, **_kwargs):
                 related_object_type="WarehouseRequest",
                 related_object_id=instance.id,
             )
-    else:
-        # Status changed - notify the requester
+    elif getattr(instance, "_previous_status", None) != instance.status:
         if instance.status == WarehouseRequest.STATUS_APPROVED and instance.approved_by:
             Notification.objects.create(
                 user=instance.requested_by,
