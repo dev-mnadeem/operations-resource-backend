@@ -1,4 +1,4 @@
-"""Who sees which branch's replenishment advice, through the API and the admin."""
+"""Replenishment advice across branches: who sees what, and what it costs."""
 
 from decimal import Decimal
 
@@ -8,8 +8,10 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.common.testing import make_branch, make_item, make_user, set_branch_qty
+from apps.inventory.models import BranchInventory
 from apps.products.models import Product
 from apps.replenishment.models import ReplenishmentAdvice
+from apps.replenishment.service import profile_for, rank_inventory
 from apps.sales.models import InventoryConsumption, SalesTransaction
 
 URL = reverse("replenishment-advice")
@@ -89,3 +91,25 @@ class AdviceAdminTests(ReplenishmentScopeTestCase):
 
     def test_a_branch_manager_sees_only_their_branch(self):
         self.assertEqual(set(self.rows_for(self.north_manager)), {"NTH"})
+
+
+class RankingQueryCountTests(ReplenishmentScopeTestCase):
+    def test_ranking_reads_demand_in_one_query_however_many_rows(self):
+        for n in range(5):
+            make_item(f"Extra {n}")
+        rows = BranchInventory.objects.all()
+        # stock rows + one grouped demand query
+        with self.assertNumQueries(2):
+            profiles = rank_inventory(rows)
+        self.assertEqual(len(profiles), rows.count())
+
+    def test_batched_and_single_row_profiles_agree(self):
+        row = BranchInventory.objects.get(branch=self.south, item=self.item)
+        batched = next(
+            p
+            for p in rank_inventory(BranchInventory.objects.all())
+            if p.branch_id == "STH" and p.item_id == self.item.pk
+        )
+        single = profile_for(row)
+        self.assertEqual(batched.daily_series, single.daily_series)
+        self.assertEqual(batched.reorder_point, single.reorder_point)

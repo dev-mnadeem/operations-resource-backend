@@ -246,13 +246,49 @@ def daily_demand_series(
         row["sales_transaction__occurred_at__date"]: float(row["total"] or 0)
         for row in grouped
     }
+    return _fill_days(observed, since, until)
 
+
+def _fill_days(observed: dict[date, float], since: date, until: date):
+    """Every day from `since` to `until`, zero where nothing was consumed."""
     series: dict[date, float] = {}
     day = since
     while day <= until:
         series[day] = observed.get(day, 0.0)
         day += timedelta(days=1)
     return series
+
+
+def observed_demand_by_row(rows, since: date, until: date):
+    """
+    Daily consumption for many stock rows in one query.
+
+    Returns {(item_id, branch_id): {sale_date: quantity}}. Profiling rows one
+    at a time cost a query each, about 375 for a branch's stock list.
+    """
+    item_ids = {row.item_id for row in rows}
+    branch_ids = {row.branch_id for row in rows}
+    grouped = (
+        InventoryConsumption.objects.filter(
+            inventory_item_id__in=item_ids,
+            sales_transaction__branch_id__in=branch_ids,
+            sales_transaction__occurred_at__date__gte=since,
+            sales_transaction__occurred_at__date__lte=until,
+        )
+        .values(
+            "inventory_item_id",
+            "sales_transaction__branch_id",
+            "sales_transaction__occurred_at__date",
+        )
+        .annotate(total=Sum("quantity_consumed"))
+        .order_by()
+    )
+    observed: dict[tuple, dict[date, float]] = {}
+    for row in grouped:
+        key = (row["inventory_item_id"], row["sales_transaction__branch_id"])
+        day = row["sales_transaction__occurred_at__date"]
+        observed.setdefault(key, {})[day] = float(row["total"] or 0)
+    return observed
 
 
 def profile_for(
@@ -262,16 +298,27 @@ def profile_for(
     service_level: float = DEFAULT_SERVICE_LEVEL,
     history_days: int = DEFAULT_HISTORY_DAYS,
     until: date | None = None,
+    observed: dict[date, float] | None = None,
 ) -> DemandProfile:
-    """Build a DemandProfile from one BranchInventory row."""
+    """
+    Build a DemandProfile from one BranchInventory row.
+
+    `observed` is the row's {sale_date: quantity} when the caller already
+    fetched it (see observed_demand_by_row); otherwise it is queried here.
+    """
     until = until or timezone.now().date()
     since = until - timedelta(days=history_days - 1)
 
     item = branch_inventory.item
     branch = branch_inventory.branch
 
-    # `.pk` rather than `.id`: Branch is keyed on branch_code.
-    series = daily_demand_series(item.pk, branch.pk if branch else None, since, until)
+    if observed is None:
+        # `.pk` rather than `.id`: Branch is keyed on branch_code.
+        series = daily_demand_series(
+            item.pk, branch.pk if branch else None, since, until
+        )
+    else:
+        series = _fill_days(observed, since, until)
     values = list(series.values())
     non_zero = [v for v in values if v > 0]
 
@@ -313,14 +360,20 @@ def rank_inventory(
     limit: int | None = None,
 ) -> list[DemandProfile]:
     """Profile every row in `queryset`, worst risk first."""
+    rows = list(queryset.select_related("item", "branch"))
+    until = timezone.now().date()
+    since = until - timedelta(days=history_days - 1)
+    observed = observed_demand_by_row(rows, since, until)
     profiles = [
         profile_for(
             row,
             lead_time_days=lead_time_days,
             service_level=service_level,
             history_days=history_days,
+            until=until,
+            observed=observed.get((row.item_id, row.branch_id), {}),
         )
-        for row in queryset.select_related("item", "branch")
+        for row in rows
     ]
     profiles.sort(
         key=lambda p: (
