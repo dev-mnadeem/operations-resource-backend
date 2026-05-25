@@ -48,8 +48,8 @@
               <th>{% trans "Branch" %}</th>
               <th>{% trans "Item" %}</th>
               <th>{% trans "Unit" %}</th>
-              <th class="text-right">{% trans "Quantity" %}</th>
-              <th class="text-right">{% trans "Min Threshold" %}</th>
+              <th class="text-end">{% trans "Quantity" %}</th>
+              <th class="text-end">{% trans "Min Threshold" %}</th>
               <th>{% trans "Status" %}</th>
             </tr>
           </thead>
@@ -59,13 +59,13 @@
                 <td>{{ bi.branch.name }}</td>
                 <td>{{ bi.item.name }}</td>
                 <td>{{ bi.item.unit.abbreviation|default:"—" }}</td>
-                <td class="text-right">{{ bi.quantity }}</td>
-                <td class="text-right">{{ bi.minimum_threshold }}</td>
+                <td class="text-end">{{ bi.quantity }}</td>
+                <td class="text-end">{{ bi.minimum_threshold }}</td>
                 <td>
                   {% if bi.minimum_threshold > 0 and bi.quantity < bi.minimum_threshold %}
-                    <span class="badge badge-danger">{% trans "Low Stock" %}</span>
+                    <span class="badge text-bg-danger">{% trans "Low Stock" %}</span>
                   {% else %}
-                    <span class="badge badge-success">{% trans "OK" %}</span>
+                    <span class="badge text-bg-success">{% trans "OK" %}</span>
                   {% endif %}
                 </td>
               </tr>

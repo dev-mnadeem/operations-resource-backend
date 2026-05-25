@@ -447,7 +447,7 @@ async function updatePendingBadge() {
             }
             
             badge.textContent = label;
-            badge.className = failedCount > 0 ? 'badge badge-danger' : 'badge badge-info';
+            badge.className = failedCount > 0 ? 'badge text-bg-danger' : 'badge text-bg-info';
             badge.style.display = 'inline-block';
             badge.style.cursor = failedCount > 0 ? 'pointer' : 'default';
             badge.title = failedCount > 0 ? "Click to retry failed actions" : "Pending synchronization";

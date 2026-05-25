@@ -45,7 +45,7 @@
               <th>{% trans "Item" %}</th>
               <th>{% trans "Unit" %}</th>
               <th>{% trans "Branch" %}</th>
-              <th class="text-right">{% trans "Total Consumed" %}</th>
+              <th class="text-end">{% trans "Total Consumed" %}</th>
             </tr>
           </thead>
           <tbody>
@@ -54,7 +54,7 @@
                 <td>{{ r.inventory_item__name }}</td>
                 <td>{{ r.inventory_item__unit__abbreviation|default:"—" }}</td>
                 <td>{{ r.sales_transaction__branch__name }}</td>
-                <td class="text-right">{{ r.total_consumed }}</td>
+                <td class="text-end">{{ r.total_consumed }}</td>
               </tr>
             {% empty %}
               <tr><td colspan="4" class="text-center text-muted py-3">{% trans "No usage data for this period." %}</td></tr>

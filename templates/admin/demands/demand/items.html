@@ -135,7 +135,7 @@
         <a href="{% url 'admin:demands_demand_items_export' demand.pk %}" class="export-csv-btn">
           <i class="fas fa-file-csv"></i> {% trans "Export CSV" %}
         </a>
-        <span class="badge {% if demand.status == 'completed' %}badge-primary{% elif demand.status == 'approved' %}badge-success{% elif demand.status == 'submitted' %}badge-info{% elif demand.status == 'pending' %}badge-secondary{% elif demand.status == 'rejected' %}badge-danger{% else %}badge-light{% endif %} text-uppercase">{{ demand.get_status_display }}</span>
+        <span class="badge {% if demand.status == 'completed' %}text-bg-primary{% elif demand.status == 'approved' %}text-bg-success{% elif demand.status == 'submitted' %}text-bg-info{% elif demand.status == 'pending' %}text-bg-secondary{% elif demand.status == 'rejected' %}text-bg-danger{% else %}text-bg-light{% endif %} text-uppercase">{{ demand.get_status_display }}</span>
       </div>
     </div>
     <div class="card-body">
@@ -198,7 +198,7 @@
             <form method="post" action="" class="d-flex flex-wrap align-items-center gap-2">
               {% csrf_token %}
               <input type="hidden" name="action" value="mark_completed">
-              <div class="form-check mr-3">
+              <div class="form-check me-3">
                 <input class="form-check-input" type="checkbox" id="id_confirm_completed" name="confirm_completed">
                 <label class="form-check-label" for="id_confirm_completed">
                   {% trans "I confirm transfer is received and demand is fulfilled." %}
@@ -222,8 +222,8 @@
                 <thead class="thead-light">
                   <tr>
                     <th style="width: 40%;">{% trans "Item" %}</th>
-                    <th style="width: 15%;" class="text-right">{% trans "Requested" %}</th>
-                    <th style="width: 15%;" class="text-right">{% trans "Approved Qty" %}</th>
+                    <th style="width: 15%;" class="text-end">{% trans "Requested" %}</th>
+                    <th style="width: 15%;" class="text-end">{% trans "Approved Qty" %}</th>
                     <th style="width: 15%;">{% trans "Unit" %}</th>
                     <th style="width: 10%;">{% trans "Priority" %}</th>
                   </tr>
@@ -232,13 +232,13 @@
                   {% for item in sub.items %}
                     <tr>
                       <td data-header="{% trans 'Item' %}">{{ item.inventory_item.name }}</td>
-                      <td class="text-right" data-header="{% trans 'Requested' %}">{{ item.quantity }}</td>
-                      <td class="text-right" data-header="{% trans 'Approved Qty' %}">
+                      <td class="text-end" data-header="{% trans 'Requested' %}">{{ item.quantity }}</td>
+                      <td class="text-end" data-header="{% trans 'Approved Qty' %}">
                         {% if can_approve_reject %}
                           <input type="number"
                                  name="approved_qty_{{ item.pk }}"
                                  form="approve-form"
-                                 class="form-control form-control-sm text-right"
+                                 class="form-control form-control-sm text-end"
                                  style="width: 90px; display: inline-block;"
                                  step="0.01" min="0.01" max="{{ item.quantity }}"
                                  placeholder="{{ item.quantity }}"
@@ -248,7 +248,7 @@
                         {% endif %}
                       </td>
                       <td data-header="{% trans 'Unit' %}">{{ item.unit }}</td>
-                      <td data-header="{% trans 'Priority' %}"><span class="badge badge-secondary">{{ item.get_priority_display }}</span></td>
+                      <td data-header="{% trans 'Priority' %}"><span class="badge text-bg-secondary">{{ item.get_priority_display }}</span></td>
                     </tr>
                   {% endfor %}
                 </tbody>

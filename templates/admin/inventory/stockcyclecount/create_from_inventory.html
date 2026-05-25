@@ -132,8 +132,8 @@
       <div class="card card-outline card-secondary mb-3">
         <div class="card-body">
           <form method="get" action="" id="count-load-branch-form" class="form-inline">
-            <div class="form-group mr-2 mb-2">
-              <label for="count_branch" class="mr-2 mb-0">
+            <div class="form-group me-2 mb-2">
+              <label for="count_branch" class="me-2 mb-0">
                 <strong>{% trans "Select Branch" %}</strong>
               </label>
               <select name="count_branch" id="count_branch" class="form-control">
@@ -143,7 +143,7 @@
                 {% endfor %}
               </select>
             </div>
-            <button type="submit" class="btn btn-primary mb-2 mr-2">
+            <button type="submit" class="btn btn-primary mb-2 me-2">
               <i class="fas fa-box-open"></i> {% trans "Load inventory" %}
             </button>
           </form>
@@ -201,15 +201,13 @@
                         <div class="card-header bg-light py-2 px-3 demand-category-header">
                           <a class="d-block text-dark text-decoration-none demand-toggle"
                              href="#cat-{{ forloop.counter }}"
-                             data-toggle="collapse"
                              data-bs-toggle="collapse"
-                             data-target="#cat-{{ forloop.counter }}"
                              data-bs-target="#cat-{{ forloop.counter }}"
                              aria-expanded="false"
                              aria-controls="cat-{{ forloop.counter }}">
-                            <i class="fas fa-chevron-down demand-chevron mr-2"></i>
+                            <i class="fas fa-chevron-down demand-chevron me-2"></i>
                             <strong>{{ cat_group.category }}</strong>
-                            <span class="demand-section-indicator text-success ml-1" style="display: none;" title="{% trans 'Some items in this section have quantity' %}"><i class="fas fa-check-circle"></i></span>
+                            <span class="demand-section-indicator text-success ms-1" style="display: none;" title="{% trans 'Some items in this section have quantity' %}"><i class="fas fa-check-circle"></i></span>
                           </a>
                         </div>
                         <div id="cat-{{ forloop.counter }}" class="collapse">
@@ -219,16 +217,14 @@
                                 <div class="card-header py-2 px-3 bg-white demand-subcategory-header">
                                   <a class="d-block text-dark text-decoration-none demand-toggle demand-toggle-sub"
                                      href="#subcat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
-                                     data-toggle="collapse"
                                      data-bs-toggle="collapse"
-                                     data-target="#subcat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                                      data-bs-target="#subcat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
                                      aria-expanded="false"
                                      aria-controls="subcat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
-                                      <i class="fas fa-chevron-down demand-chevron mr-2"></i>
+                                      <i class="fas fa-chevron-down demand-chevron me-2"></i>
                                       {{ subcat.name }}
-                                      <span class="badge badge-light demand-badge">{{ subcat.items|length }} {% trans "items" %}</span>
-                                      <span class="demand-section-indicator text-success ml-1" style="display: none;" title="{% trans 'Some items in this section have quantity' %}"><i class="fas fa-check-circle"></i></span>
+                                      <span class="badge text-bg-light demand-badge">{{ subcat.items|length }} {% trans "items" %}</span>
+                                      <span class="demand-section-indicator text-success ms-1" style="display: none;" title="{% trans 'Some items in this section have quantity' %}"><i class="fas fa-check-circle"></i></span>
                                     </a>
                                 </div>
                                 <div id="subcat-{{ forloop.parentloop.counter }}-{{ forloop.counter }}" class="collapse">
@@ -238,8 +234,8 @@
                                         <tr>
                                           <th>{% trans "Item" %}</th>
                                           <th>{% trans "SKU" %}</th>
-                                          <th class="text-right">{% trans "System stock" %}</th>
-                                          <th style="width: 250px;" class="text-right">
+                                          <th class="text-end">{% trans "System stock" %}</th>
+                                          <th style="width: 250px;" class="text-end">
                                             {% trans "Actual counted quantity" %}
                                           </th>
                                         </tr>
@@ -257,17 +253,17 @@
                                             <td class="align-middle" data-header="{% trans 'SKU' %}">
                                               {{ item.sku }}
                                             </td>
-                                            <td class="align-middle text-right" data-header="{% trans 'System stock' %}">
+                                            <td class="align-middle text-end" data-header="{% trans 'System stock' %}">
                                               {{ item.current_stock }} {{ item.unit.abbreviation }}
                                             </td>
-                                            <td class="align-middle text-right" data-header="{% trans 'Actual counted quantity' %}">
+                                            <td class="align-middle text-end" data-header="{% trans 'Actual counted quantity' %}">
                                               <div class="input-group input-group-sm">
                                                 <input type="number"
                                                        step="1"
                                                        min="0"
                                                        name="qty_{{ item.id }}"
                                                        id="qty_{{ item.id }}"
-                                                       class="form-control text-right"
+                                                       class="form-control text-end"
                                                        placeholder="{% trans 'Actual qty' %}">
                                                 <div class="input-group-append">
                                                   <span class="input-group-text">

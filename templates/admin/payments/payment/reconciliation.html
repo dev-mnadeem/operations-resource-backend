@@ -52,9 +52,9 @@
               <th>{% trans "Vendor" %}</th>
               <th>{% trans "PO" %}</th>
               <th>{% trans "Due Date" %}</th>
-              <th class="text-right">{% trans "Invoiced" %}</th>
-              <th class="text-right">{% trans "Paid" %}</th>
-              <th class="text-right">{% trans "Outstanding" %}</th>
+              <th class="text-end">{% trans "Invoiced" %}</th>
+              <th class="text-end">{% trans "Paid" %}</th>
+              <th class="text-end">{% trans "Outstanding" %}</th>
               <th>{% trans "Status" %}</th>
             </tr>
           </thead>
@@ -68,10 +68,10 @@
                 </td>
                 <td>{{ row.invoice.vendor }}</td>
                 <td>{% if row.invoice.purchase_order %}#{{ row.invoice.purchase_order.pk }}{% else %}—{% endif %}</td>
-                <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"Y-m-d" }}{% else %}—{% endif %}{% if row.overdue %} <span class="badge badge-danger">overdue</span>{% endif %}</td>
-                <td class="text-right">{{ row.invoice.amount }}</td>
-                <td class="text-right">{{ row.paid }}</td>
-                <td class="text-right {% if row.outstanding > 0 %}text-danger font-weight-bold{% else %}text-success{% endif %}">{{ row.outstanding }}</td>
+                <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"Y-m-d" }}{% else %}—{% endif %}{% if row.overdue %} <span class="badge text-bg-danger">overdue</span>{% endif %}</td>
+                <td class="text-end">{{ row.invoice.amount }}</td>
+                <td class="text-end">{{ row.paid }}</td>
+                <td class="text-end {% if row.outstanding > 0 %}text-danger fw-bold{% else %}text-success{% endif %}">{{ row.outstanding }}</td>
                 <td><span class="badge badge-{% if row.invoice.status == 'paid' %}success{% elif row.invoice.status == 'partial' %}warning{% else %}danger{% endif %}">{{ row.invoice.get_status_display }}</span></td>
               </tr>
             {% empty %}
@@ -81,9 +81,9 @@
           <tfoot class="thead-light">
             <tr>
               <th colspan="4">{% trans "Totals" %}</th>
-              <th class="text-right">{{ total_invoiced }}</th>
-              <th class="text-right">{{ total_paid }}</th>
-              <th class="text-right {% if total_outstanding > 0 %}text-danger{% else %}text-success{% endif %}">{{ total_outstanding }}</th>
+              <th class="text-end">{{ total_invoiced }}</th>
+              <th class="text-end">{{ total_paid }}</th>
+              <th class="text-end {% if total_outstanding > 0 %}text-danger{% else %}text-success{% endif %}">{{ total_outstanding }}</th>
               <th></th>
             </tr>
           </tfoot>

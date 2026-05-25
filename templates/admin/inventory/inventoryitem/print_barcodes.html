@@ -67,7 +67,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h1 class="h4 mb-0">{% trans "Barcode Labels" %} — {{ labels|length }} {% trans "item(s)" %}</h1>
       <div>
-        <button onclick="window.print()" class="btn btn-primary mr-2">
+        <button onclick="window.print()" class="btn btn-primary me-2">
           <i class="fas fa-print"></i> {% trans "Print" %}
         </button>
         <a href="{% url 'admin:inventory_inventoryitem_changelist' %}" class="btn btn-secondary">

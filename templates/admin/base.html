@@ -125,10 +125,10 @@
         transition: all 0.2s ease;
     }
     
-    #sync-badge.badge-info {
+    #sync-badge.text-bg-info {
         background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
     }
-    #sync-badge.badge-danger {
+    #sync-badge.text-bg-danger {
         background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
     }
     #sync-badge:hover {
@@ -176,7 +176,7 @@
         
         if (groupName && navRight) {
             const li = document.createElement('li');
-            li.className = 'nav-item d-none d-sm-flex align-items-center mr-3';
+            li.className = 'nav-item d-none d-sm-flex align-items-center me-3';
             li.innerHTML = `
                 <div class="role-label" title="User Role">
                     <span>${groupName} Dashboard</span>
@@ -199,7 +199,7 @@
 
         if (locationName && navRight) {
             const locLi = document.createElement('li');
-            locLi.className = 'nav-item d-none d-sm-flex align-items-center mr-2';
+            locLi.className = 'nav-item d-none d-sm-flex align-items-center me-2';
             locLi.innerHTML = `
                 <div class="location-label" title="Location" style="
                     display: flex;

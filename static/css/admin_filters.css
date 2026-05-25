@@ -419,3 +419,55 @@ img, iframe, video, embed { max-width: 100%; height: auto; }
     .card-title { font-size: 0.9375rem !important; }
     .breadcrumb { display: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   TYPOGRAPHY AND STAT CARDS
+   ═══════════════════════════════════════════════════════════ */
+
+/* One font stack everywhere: AdminLTE's sidebar links and stat-card labels
+   fell back to the browser's serif. A system stack also keeps the offline
+   admin from depending on a web font. */
+:root {
+    --arc-font: system-ui, -apple-system, "Segoe UI", "Helvetica Neue",
+        "Noto Sans", "Liberation Sans", Arial, sans-serif;
+    --bs-body-font-family: var(--arc-font);
+}
+body,
+.main-sidebar,
+.sidebar-menu .nav-link p,
+.small-box p,
+.brand-link .brand-text {
+    font-family: var(--arc-font);
+}
+
+/* Quantities line up in columns. */
+.table td,
+.table th,
+#result_list td {
+    font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard focus stays visible on the custom buttons and links. */
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible {
+    outline: 2px solid var(--arc-blue-dark);
+    outline-offset: 2px;
+}
+
+/* Stat cards (demand dashboard): Bootstrap 5 AdminLTE no longer places the
+   icon, so it rendered as a small glyph under the label. */
+.small-box {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.5rem;
+}
+.small-box .inner { position: relative; z-index: 1; }
+.small-box .icon {
+    position: absolute;
+    top: 0.75rem;
+    right: 1rem;
+    font-size: 3.25rem;
+    line-height: 1;
+    opacity: 0.2;
+}

@@ -45,10 +45,10 @@
               <th>{% trans "Branch" %}</th>
               <th>{% trans "Demand #" %}</th>
               <th>{% trans "Item" %}</th>
-              <th class="text-right">{% trans "Requested" %}</th>
-              <th class="text-right">{% trans "Approved" %}</th>
-              <th class="text-right">{% trans "Received" %}</th>
-              <th class="text-right">{% trans "Variance" %}</th>
+              <th class="text-end">{% trans "Requested" %}</th>
+              <th class="text-end">{% trans "Approved" %}</th>
+              <th class="text-end">{% trans "Received" %}</th>
+              <th class="text-end">{% trans "Variance" %}</th>
             </tr>
           </thead>
           <tbody>
@@ -57,10 +57,10 @@
                 <td>{{ r.branch }}</td>
                 <td>#{{ r.demand_id }}</td>
                 <td>{{ r.item }}</td>
-                <td class="text-right">{{ r.requested }}</td>
-                <td class="text-right">{{ r.approved }}</td>
-                <td class="text-right">{{ r.received }}</td>
-                <td class="text-right {% if r.variance < 0 %}text-danger font-weight-bold{% elif r.variance > 0 %}text-info{% else %}text-success{% endif %}">
+                <td class="text-end">{{ r.requested }}</td>
+                <td class="text-end">{{ r.approved }}</td>
+                <td class="text-end">{{ r.received }}</td>
+                <td class="text-end {% if r.variance < 0 %}text-danger fw-bold{% elif r.variance > 0 %}text-info{% else %}text-success{% endif %}">
                   {% if r.variance > 0 %}+{% endif %}{{ r.variance|floatformat:2 }}
                 </td>
               </tr>

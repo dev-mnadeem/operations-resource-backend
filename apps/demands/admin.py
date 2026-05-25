@@ -77,12 +77,12 @@ class DemandAdmin(DeleteRowActionButtonMixin, admin.ModelAdmin):
         from django.utils.html import format_html
 
         css_class = {
-            Demand.STATUS_PENDING: "badge-secondary",
-            Demand.STATUS_SUBMITTED: "badge-info",
-            Demand.STATUS_APPROVED: "badge-success",
-            Demand.STATUS_COMPLETED: "badge-primary",
-            Demand.STATUS_REJECTED: "badge-danger",
-        }.get(obj.status, "badge-light")
+            Demand.STATUS_PENDING: "text-bg-secondary",
+            Demand.STATUS_SUBMITTED: "text-bg-info",
+            Demand.STATUS_APPROVED: "text-bg-success",
+            Demand.STATUS_COMPLETED: "text-bg-primary",
+            Demand.STATUS_REJECTED: "text-bg-danger",
+        }.get(obj.status, "text-bg-light")
         return format_html(
             '<span class="badge {} text-uppercase">{}</span>',
             css_class,

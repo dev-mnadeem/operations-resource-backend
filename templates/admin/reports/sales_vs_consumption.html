@@ -44,8 +44,8 @@
             <tr>
               <th>{% trans "Branch" %}</th>
               <th>{% trans "Product" %}</th>
-              <th class="text-right">{% trans "Units Sold" %}</th>
-              <th class="text-right">{% trans "Revenue" %}</th>
+              <th class="text-end">{% trans "Units Sold" %}</th>
+              <th class="text-end">{% trans "Revenue" %}</th>
             </tr>
           </thead>
           <tbody>
@@ -53,8 +53,8 @@
               <tr>
                 <td>{{ s.branch__name }}</td>
                 <td>{{ s.product__name }}</td>
-                <td class="text-right">{{ s.units_sold }}</td>
-                <td class="text-right">{{ s.revenue }}</td>
+                <td class="text-end">{{ s.units_sold }}</td>
+                <td class="text-end">{{ s.revenue }}</td>
               </tr>
             {% empty %}
               <tr><td colspan="4" class="text-center text-muted py-3">{% trans "No sales data for this period." %}</td></tr>
@@ -72,7 +72,7 @@
             <tr>
               <th>{% trans "Branch" %}</th>
               <th>{% trans "Item" %}</th>
-              <th class="text-right">{% trans "Total Consumed" %}</th>
+              <th class="text-end">{% trans "Total Consumed" %}</th>
             </tr>
           </thead>
           <tbody>
@@ -80,7 +80,7 @@
               <tr>
                 <td>{{ c.sales_transaction__branch__name }}</td>
                 <td>{{ c.inventory_item__name }}</td>
-                <td class="text-right">{{ c.total_consumed }}</td>
+                <td class="text-end">{{ c.total_consumed }}</td>
               </tr>
             {% empty %}
               <tr><td colspan="3" class="text-center text-muted py-3">{% trans "No consumption data for this period." %}</td></tr>

@@ -48,8 +48,8 @@
               <th>{% trans "Warehouse" %}</th>
               <th>{% trans "Item" %}</th>
               <th>{% trans "Unit" %}</th>
-              <th class="text-right">{% trans "Quantity" %}</th>
-              <th class="text-right">{% trans "Min Threshold" %}</th>
+              <th class="text-end">{% trans "Quantity" %}</th>
+              <th class="text-end">{% trans "Min Threshold" %}</th>
               <th>{% trans "Location" %}</th>
               <th>{% trans "Status" %}</th>
             </tr>
@@ -60,14 +60,14 @@
                 <td>{{ wi.warehouse.name }}</td>
                 <td>{{ wi.inventory_item.name }}</td>
                 <td>{{ wi.inventory_item.unit.abbreviation|default:"—" }}</td>
-                <td class="text-right">{{ wi.quantity }}</td>
-                <td class="text-right">{{ wi.minimum_threshold }}</td>
+                <td class="text-end">{{ wi.quantity }}</td>
+                <td class="text-end">{{ wi.minimum_threshold }}</td>
                 <td>{{ wi.location|default:"—" }}</td>
                 <td>
                   {% if wi.minimum_threshold > 0 and wi.quantity < wi.minimum_threshold %}
-                    <span class="badge badge-danger">{% trans "Low Stock" %}</span>
+                    <span class="badge text-bg-danger">{% trans "Low Stock" %}</span>
                   {% else %}
-                    <span class="badge badge-success">{% trans "OK" %}</span>
+                    <span class="badge text-bg-success">{% trans "OK" %}</span>
                   {% endif %}
                 </td>
               </tr>

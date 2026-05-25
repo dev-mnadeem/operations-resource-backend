@@ -52,7 +52,7 @@
     {# Barcode Scanner #}
     <div class="card card-outline card-primary mb-3" id="barcode-scanner-box">
       <div class="card-header">
-        <h3 class="card-title"><i class="fas fa-barcode mr-1"></i> {% trans "Barcode Scanner" %}</h3>
+        <h3 class="card-title"><i class="fas fa-barcode me-1"></i> {% trans "Barcode Scanner" %}</h3>
       </div>
       <div class="card-body">
         <div class="input-group" style="max-width: 420px;">
@@ -73,7 +73,7 @@
               <tr>
                 <th>{% trans "Item" %}</th>
                 <th>{% trans "Barcode / SKU" %}</th>
-                <th class="text-right">{% trans "Dispatched" %}</th>
+                <th class="text-end">{% trans "Dispatched" %}</th>
                 <th style="width: 160px;">{% trans "Received Qty" %}</th>
               </tr>
             </thead>
@@ -82,7 +82,7 @@
                 <tr id="row-{{ ti.pk }}" data-barcode="{{ ti.barcode }}" data-sku="{{ ti.sku }}" data-item-id="{{ ti.pk }}">
                   <td>{{ ti.inventory_item.name }}</td>
                   <td class="text-muted small">{% if ti.barcode %}{{ ti.barcode }}{% elif ti.sku %}{{ ti.sku }}{% else %}—{% endif %}</td>
-                  <td class="text-right">
+                  <td class="text-end">
                     {% if ti.dispatched_quantity %}{{ ti.dispatched_quantity }}{% else %}{{ ti.quantity }}{% endif %}
                     {{ ti.inventory_item.unit.abbreviation }}
                   </td>
@@ -102,7 +102,7 @@
             </tbody>
           </table>
         </div>
-        <div class="card-footer text-right">
+        <div class="card-footer text-end">
           <button type="submit" class="btn btn-success">
             <i class="fas fa-check-circle"></i> {% trans "Confirm Receipt" %}
           </button>

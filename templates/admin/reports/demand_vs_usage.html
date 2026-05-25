@@ -35,12 +35,12 @@
 <div class="container-fluid">
     <div class="row mb-4 align-items-center">
         <div class="col">
-            <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chart-line mr-2"></i>{% trans "Demand vs. Actual Usage" %}</h1>
+            <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chart-line me-2"></i>{% trans "Demand vs. Actual Usage" %}</h1>
             <p class="text-muted small mb-0">{% trans "Comparison of approved demand quantities vs. actual inventory consumption from sales." %}</p>
         </div>
         <div class="col-auto">
             <a href="?date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&export=csv" class="btn btn-success shadow-sm">
-                <i class="fas fa-file-csv fa-sm text-white-50 mr-1"></i> {% trans "Export CSV" %}
+                <i class="fas fa-file-csv fa-sm text-white-50 me-1"></i> {% trans "Export CSV" %}
             </a>
         </div>
     </div>
@@ -49,16 +49,16 @@
     <div class="card card-premium filter-card mb-4">
         <div class="card-body">
             <form method="get" class="form-inline">
-                <div class="form-group mr-3">
-                    <label class="mr-2 font-weight-bold text-xs text-uppercase">{% trans "From" %}:</label>
+                <div class="form-group me-3">
+                    <label class="me-2 fw-bold text-xs text-uppercase">{% trans "From" %}:</label>
                     <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm border-0 bg-light">
                 </div>
-                <div class="form-group mr-3">
-                    <label class="mr-2 font-weight-bold text-xs text-uppercase">{% trans "To" %}:</label>
+                <div class="form-group me-3">
+                    <label class="me-2 fw-bold text-xs text-uppercase">{% trans "To" %}:</label>
                     <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm border-0 bg-light">
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm px-4">
-                    <i class="fas fa-filter fa-sm mr-1"></i> {% trans "Filter" %}
+                    <i class="fas fa-filter fa-sm me-1"></i> {% trans "Filter" %}
                 </button>
             </form>
         </div>
@@ -67,36 +67,36 @@
     <!-- Report Table -->
     <div class="card card-premium shadow mb-4">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h6 class="m-0 font-weight-bold text-primary">{% trans "Demand vs Consumption Details" %}</h6>
+            <h6 class="m-0 fw-bold text-primary">{% trans "Demand vs Consumption Details" %}</h6>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table report-table table-hover mb-0">
                     <thead>
                         <tr>
-                            <th class="pl-4">{% trans "Branch" %}</th>
+                            <th class="ps-4">{% trans "Branch" %}</th>
                             <th>{% trans "Item" %}</th>
-                            <th class="text-right">{% trans "Requested" %}</th>
-                            <th class="text-right">{% trans "Approved" %}</th>
-                            <th class="text-right">{% trans "Consumed" %}</th>
-                            <th class="text-right pr-4">{% trans "Variance" %}</th>
+                            <th class="text-end">{% trans "Requested" %}</th>
+                            <th class="text-end">{% trans "Approved" %}</th>
+                            <th class="text-end">{% trans "Consumed" %}</th>
+                            <th class="text-end pe-4">{% trans "Variance" %}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for r in rows %}
                         <tr>
-                            <td class="pl-4 font-weight-bold text-gray-800">{{ r.branch }}</td>
+                            <td class="ps-4 fw-bold text-gray-800">{{ r.branch }}</td>
                             <td>{{ r.item }}</td>
-                            <td class="text-right">{{ r.requested|floatformat:2 }}</td>
-                            <td class="text-right">
-                                <span class="badge badge-light px-2 py-1">{{ r.approved|floatformat:2 }}</span>
+                            <td class="text-end">{{ r.requested|floatformat:2 }}</td>
+                            <td class="text-end">
+                                <span class="badge text-bg-light px-2 py-1">{{ r.approved|floatformat:2 }}</span>
                             </td>
-                            <td class="text-right">{{ r.consumed|floatformat:2 }}</td>
-                            <td class="text-right pr-4">
+                            <td class="text-end">{{ r.consumed|floatformat:2 }}</td>
+                            <td class="text-end pe-4">
                                 {% if r.variance > 0 %}
-                                    <span class="variance-pos"><i class="fas fa-caret-up mr-1"></i>{{ r.variance|floatformat:2 }}</span>
+                                    <span class="variance-pos"><i class="fas fa-caret-up me-1"></i>{{ r.variance|floatformat:2 }}</span>
                                 {% elif r.variance < 0 %}
-                                    <span class="variance-neg"><i class="fas fa-caret-down mr-1"></i>{{ r.variance|floatformat:2 }}</span>
+                                    <span class="variance-neg"><i class="fas fa-caret-down me-1"></i>{{ r.variance|floatformat:2 }}</span>
                                 {% else %}
                                     <span class="variance-zero">{{ r.variance|floatformat:2 }}</span>
                                 {% endif %}
