@@ -1,0 +1,84 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a> &rsaquo;
+    {% trans 'Warehouse Stock Levels' %}
+  </div>
+{% endblock %}
+
+{% block content %}
+<section class="content">
+  <div class="container-fluid">
+    <div class="row mb-3">
+      <div class="col-12 d-flex justify-content-between align-items-center">
+        <h1 class="h3 mb-0">{% trans "Warehouse Stock Levels" %}</h1>
+        <a href="?{% if selected_warehouse %}warehouse={{ selected_warehouse }}&{% endif %}export=csv" class="btn btn-success">
+          <i class="fas fa-file-csv"></i> {% trans "Export CSV" %}
+        </a>
+      </div>
+    </div>
+
+    {% if warehouses %}
+    <form method="get" class="card card-body mb-4">
+      <div class="form-row align-items-end">
+        <div class="col-auto">
+          <label>{% trans "Warehouse" %}</label>
+          <select name="warehouse" class="form-control form-control-sm">
+            <option value="">{% trans "All Warehouses" %}</option>
+            {% for wh in warehouses %}
+              <option value="{{ wh.pk }}" {% if selected_warehouse == wh.pk|stringformat:"s" %}selected{% endif %}>{{ wh.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-primary btn-sm">{% trans "Filter" %}</button>
+        </div>
+      </div>
+    </form>
+    {% endif %}
+
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">{% trans "Current Stock" %}</h3></div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>{% trans "Warehouse" %}</th>
+              <th>{% trans "Item" %}</th>
+              <th>{% trans "Unit" %}</th>
+              <th class="text-right">{% trans "Quantity" %}</th>
+              <th class="text-right">{% trans "Min Threshold" %}</th>
+              <th>{% trans "Location" %}</th>
+              <th>{% trans "Status" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for wi in rows %}
+              <tr {% if wi.minimum_threshold > 0 and wi.quantity < wi.minimum_threshold %}class="table-danger"{% endif %}>
+                <td>{{ wi.warehouse.name }}</td>
+                <td>{{ wi.inventory_item.name }}</td>
+                <td>{{ wi.inventory_item.unit.abbreviation|default:"—" }}</td>
+                <td class="text-right">{{ wi.quantity }}</td>
+                <td class="text-right">{{ wi.minimum_threshold }}</td>
+                <td>{{ wi.location|default:"—" }}</td>
+                <td>
+                  {% if wi.minimum_threshold > 0 and wi.quantity < wi.minimum_threshold %}
+                    <span class="badge badge-danger">{% trans "Low Stock" %}</span>
+                  {% else %}
+                    <span class="badge badge-success">{% trans "OK" %}</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="7" class="text-center text-muted py-3">{% trans "No stock data found." %}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

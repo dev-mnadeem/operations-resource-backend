@@ -1,0 +1,421 @@
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL LAYOUT FOUNDATION
+   ═══════════════════════════════════════════════════════════ */
+
+/* Universal box-sizing so padding never causes overflow */
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Prevent horizontal scroll bleed from any child */
+.content-wrapper {
+    overflow-x: hidden;
+    min-width: 0;
+}
+
+/* Ensure the main content block fits inside the sidebar-aware wrapper */
+.content-wrapper > .content {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Tables always scroll horizontally rather than blowing out the layout */
+.results, .module > table {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    width: 100%;
+}
+
+/* All images and embeds stay within their containers */
+img, iframe, video, embed { max-width: 100%; height: auto; }
+
+/* ─── Accent colour token (matches demand page & filters) ─── */
+:root {
+    --arc-blue:      #4a90e2;
+    --arc-blue-dark: #357abd;
+    --arc-bg:        #f0f2f7;
+    --arc-border:    #e5e7eb;
+    --arc-text:      #111827;
+    --arc-muted:     #6b7280;
+}
+
+/* ─── Apply site background to the content wrapper ─── */
+.content-wrapper { background: var(--arc-bg); }
+
+/* Jazzmin / AdminLTE fixed top bar: solid fill so scrolling body text never
+   bleeds through (common on narrow viewports when the theme omits a border). */
+.layout-navbar-fixed .wrapper .main-header.navbar,
+.main-header.navbar {
+    background-color: #fff;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+    z-index: 1030;
+}
+
+/* Admin Filter Pills - Refined Compact Styling */
+
+/* ── Filter pills ── */
+.admin-filter-pill-container {
+    margin-bottom: 0.75rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 0.9375rem;
+    width: 100%;
+}
+
+.admin-filter-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--arc-muted);
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    min-width: 6.25rem;
+    flex-shrink: 0;
+}
+
+.admin-filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.admin-filter-pills a {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #4b5563;
+    background-color: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.admin-filter-pills a:hover {
+    background-color: #f9fafb;
+    border-color: #9ca3af;
+    color: var(--arc-text);
+}
+
+.admin-filter-pills li.selected a {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border-color: #7dd3fc;
+    font-weight: 600;
+}
+
+/* ── Changelist filter & search ── */
+#changelist-filter {
+    border: none !important;
+    background: #f3f4f6 !important;
+    width: 100% !important;
+    margin: 0.625rem 0 1.25rem 0 !important;
+    position: static !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 1.25rem !important;
+    border-radius: 0.5rem !important;
+    border: 1px solid var(--arc-border) !important;
+}
+
+#changelist-filter h2 { display: none !important; }
+
+#changelist-filter > div {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+#changelist-search {
+    margin-bottom: 0 !important;
+    padding: 0.9375rem 1.25rem !important;
+    background: #fff !important;
+    border: 1px solid var(--arc-border) !important;
+    border-bottom: none !important;
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+    width: 100% !important;
+}
+
+.changelist-form-container {
+    display: flex;
+    flex-direction: column;
+}
+
+#changelist-search + #changelist-filter {
+    border-radius: 0 0 0.5rem 0.5rem !important;
+    margin-top: 0 !important;
+}
+
+#changelist-search .form-inline {
+    justify-content: flex-start !important;
+    gap: 0.625rem;
+}
+
+#changelist-search input[type="text"] {
+    width: 18.75rem !important;
+    max-width: 100% !important;
+    height: 2.375rem !important;
+}
+
+/* ── Tables always scroll horizontally ── */
+.results {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+}
+
+/* ── ChangeForm ── */
+.form-group {
+    border-bottom: 1px solid #f1f3f5;
+    padding-bottom: 0.625rem;
+}
+
+.last-child.form-group, fieldset .form-group:last-child {
+    border-bottom: none;
+}
+
+.readonly { word-break: break-word !important; }
+
+/* ══════════════════════════════════════════
+   BREAKPOINT: ≤ 62rem (≈ 992px) — Tablet/small desktop
+   ══════════════════════════════════════════ */
+@media (max-width: 62rem) {
+    /* Tabular inlines scroll horizontally */
+    .inline-group .tabular fieldset.module {
+        overflow-x: auto !important;
+        display: block !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .inline-group .tabular table { min-width: 37.5rem !important; }
+
+    /* Stacked inlines as cards */
+    .inline-group .inline-related {
+        border: 1px solid #dee2e6 !important;
+        border-radius: 0.5rem !important;
+        margin-bottom: 1.5rem !important;
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.05) !important;
+        overflow: hidden !important;
+    }
+    .inline-group .inline-related h3 {
+        background: #f8f9fa !important;
+        padding: 0.625rem 0.9375rem !important;
+        border-bottom: 1px solid #dee2e6 !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Modal sizing */
+    .modal-dialog {
+        max-width: 98% !important;
+        width: 98% !important;
+        margin: 0.3125rem auto !important;
+    }
+    .modal-content { border-radius: 0.5rem !important; }
+}
+
+/* ══════════════════════════════════════════
+   BREAKPOINT: ≤ 48rem (≈ 768px) — Mobile/phablet
+   ══════════════════════════════════════════ */
+@media (max-width: 48rem) {
+    /* Stack filter pill containers */
+    .admin-filter-pill-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        background: #fff;
+        padding: 0.625rem !important;
+        border-radius: 0.375rem;
+        border: 1px solid var(--arc-border);
+    }
+    .admin-filter-title { min-width: auto; }
+
+    #changelist-search input[type="text"] { width: 100% !important; }
+
+    .admin-filter-pills a {
+        padding: 0.5rem 1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Action bar wraps */
+    .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.625rem;
+    }
+
+    /* Table stacking on mobile */
+    .stack-on-mobile thead { display: none; }
+
+    .stack-on-mobile tr {
+        display: block;
+        margin-bottom: 1.5rem;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.5rem;
+        padding: 0.625rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.05);
+    }
+
+    .stack-on-mobile td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: none !important;
+        padding: 0.5rem 0.3125rem !important;
+        text-align: right;
+    }
+
+    .stack-on-mobile td::before {
+        content: attr(data-header);
+        float: left;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.6875rem;
+        color: #6c757d;
+        flex: 1;
+        text-align: left;
+    }
+
+    .stack-on-mobile .input-group {
+        width: 100% !important;
+        max-width: 9.375rem;
+    }
+
+    .stack-on-mobile td:first-child {
+        display: block;
+        text-align: left;
+        font-size: 1.0625rem;
+        font-weight: 700;
+        color: #212529;
+        border-bottom: 1px solid #f8f9fa !important;
+        margin-bottom: 0.3125rem;
+        padding-bottom: 0.625rem !important;
+    }
+    .stack-on-mobile td:first-child::before { display: none; }
+
+    /* Popup filters */
+    .popup #changelist-search .form-inline {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.5rem !important;
+        padding-bottom: 0.625rem !important;
+    }
+    .popup #changelist-search input[type="text"] {
+        width: 100% !important;
+        margin-right: 0 !important;
+    }
+    .popup #changelist table {
+        display: block !important;
+        width: 100% !important;
+        overflow-x: auto !important;
+        min-width: 28.125rem !important;
+    }
+    .popup .actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.3125rem !important;
+        padding-top: 0.625rem !important;
+    }
+}
+
+/* ══════════════════════════════════════════
+   BREAKPOINT: ≤ 30rem (≈ 480px) — Small phones
+   ══════════════════════════════════════════ */
+@media (max-width: 30rem) {
+    /* Remove duplicate padding — AdminLTE .content already has its own */
+    .content-wrapper {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    .content { padding: 0 0.3125rem !important; }
+
+    .card-body { padding: 0.625rem !important; }
+
+    h1, .h1 { font-size: 1.375rem !important; }
+    h2, .h2 { font-size: 1.125rem !important; }
+    .content-header h1 {
+        font-size: 1.25rem !important;
+        line-height: 1.2;
+        margin-bottom: 0.3125rem !important;
+    }
+
+    .breadcrumb {
+        background: transparent !important;
+        padding: 0 !important;
+        margin-bottom: 0.625rem !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* Related widget stacking */
+    .related-widget-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        width: 100% !important;
+    }
+    .related-widget-wrapper > select,
+    .related-widget-wrapper > .select2-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 0.3125rem !important;
+    }
+    .related-widget-wrapper-link {
+        display: inline-flex !important;
+        margin: 0.125rem 0.3125rem 0.125rem 0 !important;
+    }
+
+    .select2-container--default .select2-selection--single {
+        height: 2.375rem !important;
+        padding: 0.3125rem !important;
+    }
+
+    /* Form row stacking */
+    .form-group.row, .row.form-group {
+        display: flex !important;
+        flex-direction: column !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        align-items: flex-start !important;
+    }
+    .form-group.row > label,
+    .form-group.row > div,
+    .col-form-label {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+        text-align: left !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-bottom: 0.3125rem !important;
+    }
+
+    /* Save row */
+    .submit-row {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        padding: 0.625rem !important;
+    }
+    .submit-row input, .submit-row a {
+        width: 100% !important;
+        margin: 0 !important;
+        text-align: center !important;
+    }
+}
+
+/* ══════════════════════════════════════════
+   BREAKPOINT: ≤ 20rem (≈ 320px) — Extra-tiny
+   ══════════════════════════════════════════ */
+@media (max-width: 20rem) {
+    h1, .h1   { font-size: 1.125rem !important; }
+    .card-title { font-size: 0.9375rem !important; }
+    .breadcrumb { display: none !important; }
+}

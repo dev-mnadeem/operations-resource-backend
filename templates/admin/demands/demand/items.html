@@ -1,0 +1,264 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo;
+    <a href="{% url 'admin:demands_demand_changelist' %}">{% trans 'Demands' %}</a>
+    &rsaquo;
+    {% blocktrans with id=demand.id %}Demand #{{ id }} items{% endblocktrans %}
+  </div>
+{% endblock %}
+
+{% block extrahead %}
+  <style>
+    .export-csv-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.58rem 1rem;
+        border-radius: 999px;
+        border: none;
+        background: #12b879;
+        color: #fff !important;
+        font-weight: 400;
+        font-size: 0.82rem;
+        margin-right: 0.35rem;
+        text-decoration: none !important;
+        transition: background 0.15s ease-in-out;
+    }
+    .export-csv-btn:hover {
+        background: #0ea56c;
+    }
+    .export-csv-btn i {
+        font-size: 1rem;
+    }
+
+    /* Fix table scrolling on mobile - Force stacking */
+    @media (max-width: 991px) {
+        .table-responsive.mobile-optimized {
+            overflow: visible !important;
+        }
+
+        .stack-on-mobile thead {
+            display: none !important;
+        }
+
+        .stack-on-mobile tr {
+            display: block !important;
+            margin-bottom: 1.5rem !important;
+            background: #fff !important;
+            border: 2px solid #e9ecef !important;
+            border-radius: 8px !important;
+            padding: 12px !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07) !important;
+            position: relative !important;
+        }
+
+        .stack-on-mobile td {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            border: none !important;
+            padding: 10px 5px !important;
+            text-align: right !important;
+            min-height: 48px !important;
+        }
+
+        .stack-on-mobile td::before {
+            content: attr(data-header);
+            float: left !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            font-size: 0.75rem !important;
+            color: #495057 !important;
+            flex: 1 !important;
+            text-align: left !important;
+            margin-right: 15px !important;
+        }
+
+        .stack-on-mobile td:first-child {
+            display: block !important;
+            text-align: center !important;
+            font-size: 1.2rem !important;
+            font-weight: 800 !important;
+            color: #1a1a1a !important;
+            border-bottom: 2px solid #f1f3f5 !important;
+            margin-bottom: 8px !important;
+            padding-bottom: 12px !important;
+            background: #f8f9fa !important;
+            margin: -12px -12px 10px -12px !important;
+            border-radius: 8px 8px 0 0 !important;
+        }
+
+        .stack-on-mobile td:first-child::before {
+            display: none !important;
+        }
+
+        .stack-on-mobile select, .stack-on-mobile input {
+            max-width: 150px !important;
+        }
+    }
+
+    /* Extra optimization for 320px devices */
+    @media (max-width: 350px) {
+        .stack-on-mobile td {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            text-align: left !important;
+        }
+        
+        .stack-on-mobile td::before {
+            margin-bottom: 5px !important;
+            margin-right: 0 !important;
+        }
+
+        .stack-on-mobile select, .stack-on-mobile input {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+
+        .h3 { font-size: 1.1rem !important; }
+        .btn { padding: 0.25rem 0.5rem !important; font-size: 0.8rem !important; }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h3 class="card-title mb-0">
+        {% blocktrans with id=demand.id %}Demand #{{ id }}{% endblocktrans %}
+      </h3>
+      <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'admin:demands_demand_items_export' demand.pk %}" class="export-csv-btn">
+          <i class="fas fa-file-csv"></i> {% trans "Export CSV" %}
+        </a>
+        <span class="badge {% if demand.status == 'completed' %}badge-primary{% elif demand.status == 'approved' %}badge-success{% elif demand.status == 'submitted' %}badge-info{% elif demand.status == 'pending' %}badge-secondary{% elif demand.status == 'rejected' %}badge-danger{% else %}badge-light{% endif %} text-uppercase">{{ demand.get_status_display }}</span>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row mb-3">
+        <div class="col-md-4">
+          <strong>{% trans "Branch" %}:</strong>
+          {{ demand.branch }}
+        </div>
+        <div class="col-md-4">
+          <strong>{% trans "Submitted by" %}:</strong>
+          {{ demand.submitted_by }}{% if demand.submitted_at %} &middot; {{ demand.submitted_at|date:"Y-m-d H:i" }}{% endif %}
+        </div>
+        <div class="col-md-4">
+          <strong>{% trans "Approved / Rejected by" %}:</strong>
+          {% if demand.approved_by %}
+            {{ demand.approved_by }}{% if demand.approved_at %} &middot; {{ demand.approved_at|date:"Y-m-d H:i" }}{% endif %}
+          {% else %}
+            <span class="text-muted">{% trans "—" %}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% if demand.rejection_reason %}
+        <div class="alert alert-warning mb-3">
+          <strong>{% trans "Rejection reason" %}:</strong> {{ demand.rejection_reason }}
+        </div>
+      {% endif %}
+      {% if can_approve_reject %}
+        <div class="card mb-3">
+          <div class="card-header">{% trans "Approve or reject demand" %}</div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 align-items-start">
+              <form method="post" action="" class="d-inline" id="approve-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="approve">
+                <button type="submit" class="btn btn-success">
+                  <i class="fas fa-check"></i> {% trans "Approve" %}
+                </button>
+              </form>
+              <form method="post" action="" class="d-inline" id="reject-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject">
+                <div class="d-flex flex-wrap align-items-end gap-2">
+                  <div>
+                    <label for="id_rejection_reason" class="sr-only">{% trans "Rejection reason (optional)" %}</label>
+                    <textarea name="rejection_reason" id="id_rejection_reason" class="form-control form-control-sm" rows="1" style="min-width: 220px;" placeholder="{% trans 'Rejection reason (optional)' %}"></textarea>
+                  </div>
+                  <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-times"></i> {% trans "Reject" %}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      {% if can_mark_completed %}
+        <div class="card mb-3">
+          <div class="card-header">{% trans "Mark demand as completed" %}</div>
+          <div class="card-body">
+            <form method="post" action="" class="d-flex flex-wrap align-items-center gap-2">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="mark_completed">
+              <div class="form-check mr-3">
+                <input class="form-check-input" type="checkbox" id="id_confirm_completed" name="confirm_completed">
+                <label class="form-check-label" for="id_confirm_completed">
+                  {% trans "I confirm transfer is received and demand is fulfilled." %}
+                </label>
+              </div>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-check-double"></i> {% trans "Mark Completed" %}
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="table-responsive mobile-optimized">
+        {% if grouped_items %}
+          {% for cat in grouped_items %}
+            <h5 class="mt-3 mb-2 text-secondary">{{ cat.category }}</h5>
+            {% for sub in cat.subcategories %}
+              <h6 class="mt-2 mb-1 font-weight-normal text-muted">{{ sub.name }}</h6>
+              <table class="table table-sm table-bordered table-striped mb-3 stack-on-mobile">
+                <thead class="thead-light">
+                  <tr>
+                    <th style="width: 40%;">{% trans "Item" %}</th>
+                    <th style="width: 15%;" class="text-right">{% trans "Requested" %}</th>
+                    <th style="width: 15%;" class="text-right">{% trans "Approved Qty" %}</th>
+                    <th style="width: 15%;">{% trans "Unit" %}</th>
+                    <th style="width: 10%;">{% trans "Priority" %}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in sub.items %}
+                    <tr>
+                      <td data-header="{% trans 'Item' %}">{{ item.inventory_item.name }}</td>
+                      <td class="text-right" data-header="{% trans 'Requested' %}">{{ item.quantity }}</td>
+                      <td class="text-right" data-header="{% trans 'Approved Qty' %}">
+                        {% if can_approve_reject %}
+                          <input type="number"
+                                 name="approved_qty_{{ item.pk }}"
+                                 form="approve-form"
+                                 class="form-control form-control-sm text-right"
+                                 style="width: 90px; display: inline-block;"
+                                 step="0.01" min="0.01" max="{{ item.quantity }}"
+                                 placeholder="{{ item.quantity }}"
+                                 value="{{ item.approved_quantity|default:item.quantity }}">
+                        {% else %}
+                          {{ item.approved_quantity|default:"—" }}
+                        {% endif %}
+                      </td>
+                      <td data-header="{% trans 'Unit' %}">{{ item.unit }}</td>
+                      <td data-header="{% trans 'Priority' %}"><span class="badge badge-secondary">{{ item.get_priority_display }}</span></td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% endfor %}
+          {% endfor %}
+        {% else %}
+          <p class="text-muted mb-0">{% trans "No items found for this demand." %}</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

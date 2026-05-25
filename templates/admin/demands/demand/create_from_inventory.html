@@ -1,0 +1,859 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    /* ── Scoped box-sizing reset ── */
+    .dc-page * { box-sizing: border-box; }
+
+    /* ── Page background ── */
+    .content-wrapper { background: #f0f2f7; }
+
+    /* ── Outer wrappers: no extra padding on top of AdminLTE's .content ── */
+    .dc-page {
+      width: 100%;
+    }
+    .dc-inner {
+      width: 100%;
+      max-width: 52rem;
+      margin: 0 auto;
+    }
+
+    /* ── Page header ── */
+    .dc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      gap: 0.5rem;
+    }
+    .dc-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 0;
+      color: #111827;
+      font-family: system-ui, -apple-system, sans-serif;
+      line-height: 1.3;
+    }
+    .dc-back-link {
+      font-size: 0.875rem;
+      color: #6b7280;
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .dc-back-link:hover { color: #4a90e2; }
+
+    /* ── Card ── */
+    .dc-card {
+      width: 100%;
+      background: #fff;
+      border-radius: 0.75rem;
+      box-shadow: 0 0.125rem 0.75rem rgba(0,0,0,0.08);
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .dc-card + .dc-card { margin-top: 0.75rem; }
+
+    /* Card section dividers */
+    .dc-section-top {
+      padding: 0.875rem 1rem 0.625rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .dc-section-mid {
+      padding: 0.625rem 1rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    /* ── Branch selector ── */
+    .dc-branch-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+    }
+    .dc-branch-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .dc-branch-select {
+      border: 1.5px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9rem;
+      outline: none;
+      flex: 1;
+      min-width: 0;
+      font-family: inherit;
+    }
+    .dc-branch-btn {
+      padding: 0.5rem 1.125rem;
+      background: #4a90e2;
+      color: #fff;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .dc-branch-btn:hover { background: #357abd; }
+
+    /* ── Search ── */
+    .dc-search-wrap {
+      position: relative;
+      margin-bottom: 0.625rem;
+    }
+    .dc-search-icon {
+      position: absolute;
+      left: 0.875rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      pointer-events: none;
+    }
+    .dc-search-input {
+      width: 100%;
+      padding: 0.6875rem 1rem 0.6875rem 2.5rem;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 0.625rem;
+      font-size: 0.9375rem;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .dc-search-input:focus {
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 0.1875rem rgba(74,144,226,0.12);
+    }
+    .dc-filter-row {
+      margin-top: 0.625rem;
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      flex-wrap: wrap;
+    }
+    .dc-filter-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #4b5563;
+      margin: 0;
+      white-space: nowrap;
+    }
+    .dc-filter-select {
+      border: 1.5px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 0.4375rem 0.625rem;
+      font-size: 0.8125rem;
+      outline: none;
+      min-width: 9rem;
+      font-family: inherit;
+      background: #fff;
+      color: #111827;
+    }
+    .dc-filter-select:focus {
+      border-color: #4a90e2;
+      box-shadow: 0 0 0 0.1875rem rgba(74,144,226,0.12);
+    }
+
+    /* ── Category tabs ── */
+    .dc-tabs {
+      display: flex;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding-bottom: 0.125rem;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .dc-tabs::-webkit-scrollbar { display: none; }
+    .dc-tab {
+      flex-shrink: 0;
+      padding: 0.375rem 1rem;
+      border-radius: 1.25rem;
+      border: 1.5px solid #e5e7eb;
+      background: #fff;
+      color: #6b7280;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .dc-tab:hover { border-color: #4a90e2; color: #4a90e2; }
+    .dc-tab.active { background: #4a90e2; border-color: #4a90e2; color: #fff; }
+
+    /* ── Action buttons ── */
+    .dc-actions {
+      display: flex;
+      gap: 0.625rem;
+    }
+    .dc-btn-outline {
+      flex: 1;
+      min-width: 0;
+      padding: 0.625rem 0.5rem;
+      border: 1.5px solid #d1d5db;
+      border-radius: 0.5rem;
+      background: #fff;
+      color: #374151;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .dc-btn-outline:hover { border-color: #4a90e2; color: #4a90e2; }
+    .dc-btn-solid {
+      flex: 1;
+      min-width: 0;
+      padding: 0.625rem 0.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: #4a90e2;
+      color: #fff;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .dc-btn-solid:hover { background: #357abd; }
+
+    /* ── Section & subcategory labels ── */
+    .dc-cat-label {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: #111827;
+      padding: 0.875rem 1rem 0.375rem;
+    }
+    .dc-subcat-label {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      background: #f9fafb;
+      padding: 0.375rem 1rem;
+    }
+
+    /* ── Item rows ── */
+    .dc-item-row {
+      display: flex;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      gap: 0.625rem;
+      border-bottom: 1px solid #f3f4f6;
+      transition: background 0.1s;
+      min-width: 0;
+    }
+    .dc-item-row:hover { background: #fafbff; }
+    .dc-item-row.has-qty { background: rgba(74,144,226,0.05); }
+
+    /* Status dot */
+    .dc-dot {
+      width: 0.5625rem;
+      height: 0.5625rem;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dc-dot.out { background: #ef4444; }
+    .dc-dot.low { background: #f59e0b; }
+    .dc-dot.ok  { background: #d1d5db; }
+
+    /* Item info */
+    .dc-item-info { flex: 1; min-width: 0; }
+    .dc-item-name {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #111827;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .dc-item-meta {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-top: 0.125rem;
+    }
+    .dc-item-meta .sv-out { color: #ef4444; font-weight: 600; }
+    .dc-item-meta .sv-low { color: #f59e0b; font-weight: 600; }
+    .dc-item-meta .sv-ok  { color: #6b7280; }
+
+    /* ── Stepper row (wrapper for stepper + unit) ── */
+    .dc-stepper-row {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      flex-shrink: 0;
+    }
+    .dc-stepper { display: flex; align-items: center; }
+
+    .dc-step-btn {
+      width: 1.875rem;
+      height: 1.875rem;
+      border: 1.5px solid #e5e7eb;
+      background: #f9fafb;
+      color: #374151;
+      font-size: 1.125rem;
+      line-height: 1;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      padding: 0;
+      user-select: none;
+      flex-shrink: 0;
+    }
+    .dc-step-btn:hover { background: #4a90e2; color: #fff; border-color: #4a90e2; }
+    .dc-step-btn.minus { border-radius: 0.375rem 0 0 0.375rem; }
+    .dc-step-btn.plus  { border-radius: 0 0.375rem 0.375rem 0; }
+
+    .dc-qty-input {
+      width: 4rem;
+      height: 1.875rem;
+      text-align: center;
+      border: 1.5px solid #e5e7eb;
+      border-left: none;
+      border-right: none;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #111827;
+      outline: none;
+      font-family: inherit;
+      -moz-appearance: textfield;
+      padding: 0 0.125rem;
+    }
+    .dc-qty-input::-webkit-outer-spin-button,
+    .dc-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .dc-qty-input:focus { border-color: #4a90e2; position: relative; z-index: 1; }
+
+    .dc-qty-unit {
+      font-size: 0.6875rem;
+      color: #9ca3af;
+      min-width: 1.25rem;
+    }
+
+    /* ── Sticky bottom bar ── */
+    .dc-bottom-bar {
+      position: sticky;
+      bottom: 0;
+      background: #fff;
+      border-top: 1.5px solid #e5e7eb;
+      padding: 0.8125rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      z-index: 200;
+      box-shadow: 0 -0.25rem 0.75rem rgba(0,0,0,0.07);
+      border-radius: 0 0 0.75rem 0.75rem;
+    }
+    .dc-summary {
+      font-size: 0.875rem;
+      color: #6b7280;
+      font-family: inherit;
+      min-width: 0;
+    }
+    .dc-summary strong { color: #111827; }
+
+    .dc-submit-btn {
+      padding: 0.625rem 1.375rem;
+      border: none;
+      border-radius: 0.5rem;
+      background: #4a90e2;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .dc-submit-btn:hover { background: #357abd; }
+
+    /* ── Empty state ── */
+    .dc-empty {
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      color: #9ca3af;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+
+    /* ── Filter hidden ── */
+    [data-hidden] { display: none !important; }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE BREAKPOINTS
+       ══════════════════════════════════════════ */
+
+    /* Tablet: tighten up inner padding */
+    @media (max-width: 40rem) {           /* ≤ 640px */
+      .dc-item-row { padding: 0.625rem 0.75rem; gap: 0.5rem; }
+      .dc-cat-label { padding: 0.75rem 0.75rem 0.25rem; }
+      .dc-subcat-label { padding: 0.3rem 0.75rem; }
+      .dc-section-top { padding: 0.75rem 0.75rem 0.5rem; }
+      .dc-section-mid { padding: 0.5rem 0.75rem; }
+      .dc-bottom-bar { padding: 0.75rem; }
+    }
+
+    /* Mobile: reflow item rows onto 2 lines */
+    @media (max-width: 33.75rem) {        /* ≤ 540px */
+      .dc-item-row {
+        display: grid;
+        grid-template-columns: 0.875rem 1fr;
+        grid-template-rows: auto auto;
+        grid-template-areas:
+          "dot info"
+          "dot stepper";
+        align-items: start;
+        gap: 0.25rem 0.625rem;
+      }
+      .dc-dot         { grid-area: dot; margin-top: 0.25rem; }
+      .dc-item-info   { grid-area: info; }
+      .dc-stepper-row { grid-area: stepper; }
+
+      /* Larger tap targets */
+      .dc-step-btn  { width: 2.25rem; height: 2.25rem; font-size: 1.25rem; }
+      .dc-qty-input { height: 2.25rem; font-size: 0.875rem; }
+    }
+
+    /* Small phones: stack bottom bar */
+    @media (max-width: 25rem) {           /* ≤ 400px */
+      .dc-bottom-bar {
+        flex-direction: column;
+        gap: 0.625rem;
+        align-items: stretch;
+      }
+      .dc-submit-btn { width: 100%; text-align: center; }
+      .dc-summary    { text-align: center; font-size: 0.8125rem; }
+      .dc-title      { font-size: 1.0625rem; }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="dc-page">
+  <div class="dc-inner">
+
+    <!-- Page header -->
+    <div class="dc-header">
+      <h1 class="dc-title">{% trans "Create demand from inventory" %}</h1>
+      <a href="{% url 'admin:demands_demand_changelist' %}" class="dc-back-link">
+        ← {% trans "Back" %}
+      </a>
+    </div>
+
+    <!-- Branch selector (admins only) -->
+    {% if show_branch_choice and branches %}
+    <div class="dc-card" style="padding: 0.875rem 1rem; margin-bottom: 0.75rem;">
+      <form method="get" action="" id="demand-load-branch-form">
+        <div class="dc-branch-bar">
+          <label for="demand_branch" class="dc-branch-label">{% trans "Branch" %}</label>
+          <select name="demand_branch" id="demand_branch" class="dc-branch-select">
+            <option value="">{% trans "— Select branch —" %}</option>
+            {% for b in branches %}
+              <option value="{{ b.branch_code }}"
+                {% if selected_branch_code == b.branch_code %}selected{% endif %}>
+                {{ b.name }} ({{ b.branch_code }})
+              </option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="dc-branch-btn">
+            {% trans "Load inventory" %}
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if show_branch_choice and not selected_branch_code %}
+      <div class="dc-card">
+        <div class="dc-empty">
+          {% trans "Select a branch above to load inventory items." %}
+        </div>
+      </div>
+    {% else %}
+
+    <form method="post" novalidate id="demand-create-inventory-form">
+      {% csrf_token %}
+      {% if show_branch_choice and selected_branch_code %}
+        <input type="hidden" name="demand_branch" value="{{ selected_branch_code }}">
+      {% endif %}
+
+      <div class="dc-card">
+
+        <!-- Search + Tabs -->
+        <div class="dc-section-top">
+          <div class="dc-search-wrap">
+            <span class="dc-search-icon">🔍</span>
+            <input type="text" id="dc-search" class="dc-search-input"
+                   placeholder="{% trans 'Search items (e.g. chicken, milk...)' %}"
+                   autocomplete="off">
+          </div>
+          <div class="dc-filter-row">
+            <label for="dc-unit-filter" class="dc-filter-label">{% trans "Unit" %}</label>
+            <select id="dc-unit-filter" class="dc-filter-select">
+              <option value="">{% trans "All units" %}</option>
+              {% for unit in unit_options %}
+                <option value="{{ unit|lower }}">{{ unit }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="dc-tabs" id="dc-tabs">
+            <button type="button" class="dc-tab active" data-filter="all">{% trans "All" %}</button>
+            {% for cat_group in grouped_items %}
+              <button type="button" class="dc-tab" data-filter="cat{{ forloop.counter }}">
+                {{ cat_group.category }}
+              </button>
+            {% endfor %}
+            <button type="button" class="dc-tab" data-filter="lowstock">
+              {% trans "Low Stock" %} ⚠️
+            </button>
+          </div>
+        </div>
+
+        <!-- Fill / Clear actions -->
+        <div class="dc-section-mid">
+          <div class="dc-actions">
+            <button type="button" class="dc-btn-outline" id="dc-fill-btn">
+              <i class="fas fa-magic"></i> {% trans "Auto-Fill Suggestions" %}
+            </button>
+            <button type="button" class="dc-btn-solid" id="dc-clear-btn">
+              {% trans "Clear All" %}
+            </button>
+          </div>
+        </div>
+
+        <!-- Items list -->
+        {% if grouped_items %}
+          <div id="dc-list">
+            {% for cat_group in grouped_items %}
+              <div class="dc-cat-label" data-scat="cat{{ forloop.counter }}">
+                {{ cat_group.category }}
+              </div>
+
+              {% for subcat in cat_group.subcategories %}
+                <div class="dc-subcat-label"
+                     data-scat="cat{{ forloop.parentloop.counter }}"
+                     data-ssub="cat{{ forloop.parentloop.counter }}sub{{ forloop.counter }}">
+                  {{ subcat.name }}
+                </div>
+
+                {% for item in subcat.items %}
+                  {% if item.current_stock == 0 %}
+                    <div class="dc-item-row"
+                         data-scat="cat{{ forloop.parentloop.parentloop.counter }}"
+                         data-ssub="cat{{ forloop.parentloop.parentloop.counter }}sub{{ forloop.parentloop.counter }}"
+                         data-name="{{ item.name|lower }}"
+                         data-unit="{{ item.unit.abbreviation|default:''|lower }}"
+                         data-status="out"
+                         data-stock="{{ item.current_stock }}"
+                         data-threshold="{{ item.min_threshold }}">
+                      <span class="dc-dot out"></span>
+                      <div class="dc-item-info">
+                        <div class="dc-item-name">{{ item.name }}</div>
+                        <div class="dc-item-meta">
+                          {% trans "Stock:" %} <span class="sv-out">{{ item.current_stock }} {{ item.unit.abbreviation }}</span>
+                          &nbsp;/&nbsp;{% trans "Min:" %} {{ item.min_threshold }} {{ item.unit.abbreviation }}
+                        </div>
+                      </div>
+                      <div class="dc-stepper-row">
+                        <div class="dc-stepper">
+                          <button type="button" class="dc-step-btn minus" data-tid="qty_{{ item.id }}">−</button>
+                          <input type="number" name="qty_{{ item.id }}" id="qty_{{ item.id }}"
+                                 class="dc-qty-input" value="" min="0" step="1" placeholder="0"
+                                 data-stock="{{ item.current_stock }}" data-threshold="{{ item.min_threshold }}">
+                          <button type="button" class="dc-step-btn plus" data-tid="qty_{{ item.id }}">+</button>
+                        </div>
+                        <span class="dc-qty-unit">{{ item.unit.abbreviation }}</span>
+                      </div>
+                    </div>
+                  {% elif item.current_stock < item.min_threshold %}
+                    <div class="dc-item-row"
+                         data-scat="cat{{ forloop.parentloop.parentloop.counter }}"
+                         data-ssub="cat{{ forloop.parentloop.parentloop.counter }}sub{{ forloop.parentloop.counter }}"
+                         data-name="{{ item.name|lower }}"
+                         data-unit="{{ item.unit.abbreviation|default:''|lower }}"
+                         data-status="low"
+                         data-stock="{{ item.current_stock }}"
+                         data-threshold="{{ item.min_threshold }}">
+                      <span class="dc-dot low"></span>
+                      <div class="dc-item-info">
+                        <div class="dc-item-name">{{ item.name }}</div>
+                        <div class="dc-item-meta">
+                          {% trans "Stock:" %} <span class="sv-low">{{ item.current_stock }} {{ item.unit.abbreviation }}</span>
+                          &nbsp;/&nbsp;{% trans "Min:" %} {{ item.min_threshold }} {{ item.unit.abbreviation }}
+                        </div>
+                      </div>
+                      <div class="dc-stepper-row">
+                        <div class="dc-stepper">
+                          <button type="button" class="dc-step-btn minus" data-tid="qty_{{ item.id }}">−</button>
+                          <input type="number" name="qty_{{ item.id }}" id="qty_{{ item.id }}"
+                                 class="dc-qty-input" value="" min="0" step="1" placeholder="0"
+                                 data-stock="{{ item.current_stock }}" data-threshold="{{ item.min_threshold }}">
+                          <button type="button" class="dc-step-btn plus" data-tid="qty_{{ item.id }}">+</button>
+                        </div>
+                        <span class="dc-qty-unit">{{ item.unit.abbreviation }}</span>
+                      </div>
+                    </div>
+                  {% else %}
+                    <div class="dc-item-row"
+                         data-scat="cat{{ forloop.parentloop.parentloop.counter }}"
+                         data-ssub="cat{{ forloop.parentloop.parentloop.counter }}sub{{ forloop.parentloop.counter }}"
+                         data-name="{{ item.name|lower }}"
+                         data-unit="{{ item.unit.abbreviation|default:''|lower }}"
+                         data-status="ok"
+                         data-stock="{{ item.current_stock }}"
+                         data-threshold="{{ item.min_threshold }}">
+                      <span class="dc-dot ok"></span>
+                      <div class="dc-item-info">
+                        <div class="dc-item-name">{{ item.name }}</div>
+                        <div class="dc-item-meta">
+                          {% trans "Stock:" %} <span class="sv-ok">{{ item.current_stock }} {{ item.unit.abbreviation }}</span>
+                          &nbsp;/&nbsp;{% trans "Min:" %} {{ item.min_threshold }} {{ item.unit.abbreviation }}
+                        </div>
+                      </div>
+                      <div class="dc-stepper-row">
+                        <div class="dc-stepper">
+                          <button type="button" class="dc-step-btn minus" data-tid="qty_{{ item.id }}">−</button>
+                          <input type="number" name="qty_{{ item.id }}" id="qty_{{ item.id }}"
+                                 class="dc-qty-input" value="" min="0" step="1" placeholder="0"
+                                 data-stock="{{ item.current_stock }}" data-threshold="{{ item.min_threshold }}">
+                          <button type="button" class="dc-step-btn plus" data-tid="qty_{{ item.id }}">+</button>
+                        </div>
+                        <span class="dc-qty-unit">{{ item.unit.abbreviation }}</span>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              {% endfor %}
+            {% endfor %}
+          </div>
+
+          <div id="dc-no-results" style="display:none;" class="dc-empty">
+            {% trans "No items match your search." %}
+          </div>
+
+          <!-- Sticky bottom bar -->
+          <div class="dc-bottom-bar">
+            <div class="dc-summary">
+              {% trans "Items selected:" %} <strong id="dc-count">0</strong>
+              &nbsp;|&nbsp;
+              {% trans "Total qty:" %} <strong id="dc-total">0.00</strong>
+            </div>
+            <button type="submit" class="dc-submit-btn">
+              {% trans "Submit Demand" %}
+            </button>
+          </div>
+
+        {% else %}
+          <div class="dc-empty">
+            {% trans "No inventory items available for your branch." %}
+          </div>
+        {% endif %}
+
+      </div><!-- /.dc-card -->
+    </form>
+
+    {% endif %}
+  </div><!-- /.dc-inner -->
+</div><!-- /.dc-page -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var form = document.getElementById('demand-create-inventory-form');
+  if (!form) return;
+
+  var activeFilter = 'all';
+  var searchTerm   = '';
+  var activeUnit   = '';
+
+  /* ── Stepper buttons ── */
+  form.addEventListener('click', function (e) {
+    var btn = e.target.closest('.dc-step-btn');
+    if (!btn) return;
+    var inp = document.getElementById(btn.dataset.tid);
+    if (!inp) return;
+    var v    = parseFloat(inp.value) || 0;
+    var step = parseFloat(inp.step)  || 1;
+    inp.value = btn.classList.contains('plus')
+      ? (v + step).toFixed(2)
+      : Math.max(0, v - step).toFixed(2);
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  /* ── Auto-Fill Suggestions ── */
+  document.getElementById('dc-fill-btn').addEventListener('click', function () {
+    var btn = this;
+    var originalHtml = btn.innerHTML;
+    var branchCode = '{{ selected_branch_code|default_if_none:""|escapejs }}'
+      || (document.getElementById('demand_branch') ? document.getElementById('demand_branch').value : '');
+    branchCode = (branchCode || '').trim();
+    if (['none', 'null', 'undefined'].includes(branchCode.toLowerCase())) {
+      branchCode = '';
+    }
+
+    if (!branchCode) {
+      alert('{% trans "Please select a branch first." %}');
+      return;
+    }
+
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {% trans "Calculating..." %}';
+
+    var url = '{% url "admin:demands_demand_suggestions" %}?branch_code=' + encodeURIComponent(branchCode);
+
+    fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          alert('Error: ' + data.error);
+          return;
+        }
+
+        var filledCount = 0;
+        for (var itemId in data) {
+          var qty = data[itemId];
+          var inp = document.getElementById('qty_' + itemId);
+          if (inp) {
+            inp.value = qty.toFixed(2);
+            inp.dispatchEvent(new Event('input', { bubbles: true }));
+            filledCount++;
+          }
+        }
+
+        if (filledCount === 0) {
+          alert('{% trans "No suggestions available for current stock levels." %}');
+        }
+      })
+      .catch(err => {
+        console.error('Fetch error:', err);
+        alert('{% trans "Failed to fetch suggestions." %}');
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      });
+  });
+
+  /* ── Clear All ── */
+  document.getElementById('dc-clear-btn').addEventListener('click', function () {
+    form.querySelectorAll('input[name^="qty_"]').forEach(function (inp) {
+      inp.value = '';
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+
+  /* ── Row highlight + summary ── */
+  function refreshSummary() {
+    var count = 0, total = 0;
+    form.querySelectorAll('input[name^="qty_"]').forEach(function (inp) {
+      var v   = parseFloat(inp.value) || 0;
+      var row = inp.closest('.dc-item-row');
+      if (v > 0) {
+        count++;
+        total += v;
+        if (row) row.classList.add('has-qty');
+      } else {
+        if (row) row.classList.remove('has-qty');
+      }
+    });
+    document.getElementById('dc-count').textContent = count;
+    document.getElementById('dc-total').textContent  = total.toFixed(2);
+  }
+
+  form.addEventListener('input', function (e) {
+    if (e.target.name && e.target.name.indexOf('qty_') === 0) refreshSummary();
+  });
+
+  /* ── Filter logic ── */
+  function applyFilters() {
+    var rows     = form.querySelectorAll('.dc-item-row');
+    var cats     = form.querySelectorAll('.dc-cat-label');
+    var subcats  = form.querySelectorAll('.dc-subcat-label');
+    var visible  = 0;
+
+    rows.forEach(function (row) {
+      var matchSearch = !searchTerm || row.dataset.name.indexOf(searchTerm) !== -1;
+      var matchUnit = !activeUnit || row.dataset.unit === activeUnit;
+      var matchFilter =
+        activeFilter === 'all' ||
+        row.dataset.scat === activeFilter ||
+        (activeFilter === 'lowstock' &&
+          (row.dataset.status === 'out' || row.dataset.status === 'low'));
+
+      if (matchSearch && matchUnit && matchFilter) {
+        delete row.dataset.hidden;
+        visible++;
+      } else {
+        row.dataset.hidden = '1';
+      }
+    });
+
+    cats.forEach(function (el) {
+      var cat = el.dataset.scat;
+      var has = !!form.querySelector('.dc-item-row[data-scat="' + cat + '"]:not([data-hidden])');
+      if (has) delete el.dataset.hidden; else el.dataset.hidden = '1';
+    });
+
+    subcats.forEach(function (el) {
+      var ssub = el.dataset.ssub;
+      var has  = !!form.querySelector('.dc-item-row[data-ssub="' + ssub + '"]:not([data-hidden])');
+      if (has) delete el.dataset.hidden; else el.dataset.hidden = '1';
+    });
+
+    var noRes = document.getElementById('dc-no-results');
+    if (noRes) noRes.style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  /* ── Tab clicks ── */
+  document.getElementById('dc-tabs').addEventListener('click', function (e) {
+    var tab = e.target.closest('.dc-tab');
+    if (!tab) return;
+    form.querySelectorAll('.dc-tab').forEach(function (t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    activeFilter = tab.dataset.filter;
+    applyFilters();
+  });
+
+  /* ── Search ── */
+  document.getElementById('dc-search').addEventListener('input', function (e) {
+    searchTerm = e.target.value.toLowerCase().trim();
+    applyFilters();
+  });
+
+  var unitFilter = document.getElementById('dc-unit-filter');
+  if (unitFilter) {
+    unitFilter.addEventListener('change', function (e) {
+      activeUnit = (e.target.value || '').toLowerCase();
+      applyFilters();
+    });
+  }
+
+  /* ── Submit guard ── */
+  form.addEventListener('submit', function (e) {
+    var hasAny = false;
+    form.querySelectorAll('input[name^="qty_"]').forEach(function (inp) {
+      if ((parseFloat(inp.value) || 0) > 0) hasAny = true;
+    });
+    if (!hasAny) {
+      e.preventDefault();
+      alert('{% trans "Please enter a quantity for at least one item." %}');
+      return;
+    }
+    if (!confirm('{% blocktrans %}Create a demand with the items and quantities you entered?{% endblocktrans %}')) {
+      e.preventDefault();
+    }
+  });
+
+  refreshSummary();
+});
+</script>
+{% endblock %}

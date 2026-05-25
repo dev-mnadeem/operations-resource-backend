@@ -1,0 +1,232 @@
+{% extends 'admin/base.html' %}
+{% load static %}
+
+{% block extrahead %}
+{{ block.super }}
+<link rel="manifest" href="/admin/manifest.json">
+<meta name="theme-color" content="#4582ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Arcadian ERP">
+{% endblock %}
+
+{% block extrajs %}
+{{ block.super }}
+<style>
+    .role-label {
+        display: flex;
+        align-items: center;
+        border: 1px solid rgba(69, 130, 236, 0.15);
+        padding: 4px 14px;
+        border-radius: 4px;
+        color: #4582ec !important;
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        transition: all 0.2s ease;
+        user-select: none;
+    }
+    .role-label i {
+        margin-right: 8px;
+        font-size: 0.9rem;
+        color: #4582ec !important;
+    }
+    .navbar-nav.ml-auto {
+        align-items: center;
+    }
+    /* Premium Offline Status Styles */
+    #offline-indicator-wrapper {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        z-index: 1010; /* Above navbar content */
+        pointer-events: none;
+        top: 8px;
+    }
+
+    #offline-indicator {
+        pointer-events: auto;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        padding: 4px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        display: flex;
+        align-items: center;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: default;
+    }
+
+    .status-dot {
+        height: 8px;
+        width: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+        background-color: #cbd5e0;
+        box-shadow: 0 0 0 0 rgba(203, 213, 224, 0.7);
+        transition: all 0.3s ease;
+    }
+
+    #status-text {
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: #4a5568;
+    }
+
+    /* Pulse Animations */
+    @keyframes pulse-green {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(40, 167, 69, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    }
+    @keyframes pulse-red {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+    }
+    @keyframes pulse-gray {
+        0% { opacity: 0.5; }
+        50% { opacity: 1; }
+        100% { opacity: 0.5; }
+    }
+
+    /* CSS Driven State Changes */
+    body:not(.is-offline) .status-dot { 
+        background-color: #28a745; 
+        animation: pulse-green 3s infinite;
+    }
+    body:not(.is-offline) #status-text { color: #218838; }
+    
+    body.is-offline .status-dot { 
+        background-color: #dc3545; 
+        animation: pulse-red 2s infinite;
+    }
+    body.is-offline #status-text { color: #c82333; }
+    body.is-offline #offline-indicator {
+        background: rgba(255, 245, 245, 0.85);
+        border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+
+    #sync-badge {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 12px;
+        margin-left: 12px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+    }
+    
+    #sync-badge.badge-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+    }
+    #sync-badge.badge-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+    #sync-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+</style>
+
+<!-- Standardized State Bridge (Executes ASAP to prevent flash) -->
+<script>
+    (function() {
+        const offline = localStorage.getItem('ARC_DEBUG_OFFLINE') === 'true' || 
+                        sessionStorage.getItem('ARC_LAST_OFFLINE_STATE') === 'true' || 
+                        navigator.onLine === false;
+        if (offline) {
+            document.documentElement.classList.add('is-offline');
+            // Also apply to body once it exists
+            const observer = new MutationObserver(() => {
+                if (document.body) {
+                    document.body.classList.add('is-offline');
+                    observer.disconnect();
+                }
+            });
+            observer.observe(document.documentElement, { childList: true });
+        }
+    })();
+</script>
+
+<!-- Core Offline Dependencies -->
+<script>
+    window.ARC_IS_ADMIN = {% if request.user.is_superuser or request.user.groups.first.name == "Admin" %}true{% else %}false{% endif %};
+</script>
+<script src="https://unpkg.com/dexie@3.2.2/dist/dexie.js"></script>
+<script src="{% static 'admin/js/admin-offline.js' %}"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Role Label Logic
+        let groupName = "{{ request.user.groups.first.name|escapejs }}";
+        {% if request.user.is_superuser %}
+            if (!groupName) groupName = "Admin";
+        {% endif %}
+        
+        const navRight = document.querySelector('.navbar-nav.ml-auto');
+        
+        if (groupName && navRight) {
+            const li = document.createElement('li');
+            li.className = 'nav-item d-none d-sm-flex align-items-center mr-3';
+            li.innerHTML = `
+                <div class="role-label" title="User Role">
+                    <span>${groupName} Dashboard</span>
+                </div>
+            `;
+            navRight.prepend(li);
+        }
+
+        // 1.5. Branch/Location Label Logic
+        let locationName = "{{ request.user.branch.name|default:''|escapejs }}";
+        if (!locationName) {
+            locationName = "{{ request.user.warehouse.name|default:''|escapejs }}";
+        }
+        {% if request.user.is_superuser %}
+            locationName = "";
+        {% endif %}
+        if (groupName === "Admin") {
+            locationName = "";
+        }
+
+        if (locationName && navRight) {
+            const locLi = document.createElement('li');
+            locLi.className = 'nav-item d-none d-sm-flex align-items-center mr-2';
+            locLi.innerHTML = `
+                <div class="location-label" title="Location" style="
+                    display: flex;
+                    align-items: center;
+                    padding: 4px 12px;
+                    color: #6c757d;
+                    font-size: 0.85rem;
+                    font-weight: 500;
+                    user-select: none;
+                ">
+                    <i class="fas fa-store-alt" style="margin-right: 6px;"></i>
+                    <span>${locationName}</span>
+                </div>
+            `;
+            navRight.prepend(locLi);
+        }
+
+        // 2. Offline Status Logic handled by admin-offline.js
+    });
+
+    // 4. Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register("/sw.js")
+                .then(reg => console.log('SW Registered', reg))
+                .catch(err => console.error('SW Registration Failed', err));
+        });
+    }
+</script>
+{% endblock %}

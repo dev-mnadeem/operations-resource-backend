@@ -1,0 +1,48 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Virtual environments
+.venv/
+venv/
+project_venv/
+
+# Python bytecode and tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage/
+
+# Local databases (may hold real data)
+db.sqlite3
+*.sqlite3
+*.sqlite3-journal
+
+# Django build output and uploads
+staticfiles/
+media/
+
+# Build output
+build/
+dist/
+*.egg-info/
+
+# Logs and scratch
+*.log
+logs/
+tmp/
+celerybeat-schedule*
+celerybeat.pid
+README.preview.html
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

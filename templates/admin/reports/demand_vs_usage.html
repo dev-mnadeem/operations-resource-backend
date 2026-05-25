@@ -1,0 +1,119 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a> &rsaquo;
+    {% trans 'Reports' %} &rsaquo;
+    {% trans 'Demand vs Usage' %}
+  </div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .variance-pos { color: #28a745; font-weight: 600; }
+    .variance-neg { color: #dc3545; font-weight: 600; }
+    .variance-zero { color: #6c757d; }
+    .report-table thead th {
+        background: #f8f9fa;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .card-premium {
+        border: none;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border-radius: 0.5rem;
+    }
+    .filter-card {
+        background: #ffffff;
+        border-left: 4px solid #007bff;
+    }
+</style>
+
+<div class="container-fluid">
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-chart-line mr-2"></i>{% trans "Demand vs. Actual Usage" %}</h1>
+            <p class="text-muted small mb-0">{% trans "Comparison of approved demand quantities vs. actual inventory consumption from sales." %}</p>
+        </div>
+        <div class="col-auto">
+            <a href="?date_from={{ date_from|date:'Y-m-d' }}&date_to={{ date_to|date:'Y-m-d' }}&export=csv" class="btn btn-success shadow-sm">
+                <i class="fas fa-file-csv fa-sm text-white-50 mr-1"></i> {% trans "Export CSV" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card card-premium filter-card mb-4">
+        <div class="card-body">
+            <form method="get" class="form-inline">
+                <div class="form-group mr-3">
+                    <label class="mr-2 font-weight-bold text-xs text-uppercase">{% trans "From" %}:</label>
+                    <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm border-0 bg-light">
+                </div>
+                <div class="form-group mr-3">
+                    <label class="mr-2 font-weight-bold text-xs text-uppercase">{% trans "To" %}:</label>
+                    <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm border-0 bg-light">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm px-4">
+                    <i class="fas fa-filter fa-sm mr-1"></i> {% trans "Filter" %}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Table -->
+    <div class="card card-premium shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">{% trans "Demand vs Consumption Details" %}</h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table report-table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="pl-4">{% trans "Branch" %}</th>
+                            <th>{% trans "Item" %}</th>
+                            <th class="text-right">{% trans "Requested" %}</th>
+                            <th class="text-right">{% trans "Approved" %}</th>
+                            <th class="text-right">{% trans "Consumed" %}</th>
+                            <th class="text-right pr-4">{% trans "Variance" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in rows %}
+                        <tr>
+                            <td class="pl-4 font-weight-bold text-gray-800">{{ r.branch }}</td>
+                            <td>{{ r.item }}</td>
+                            <td class="text-right">{{ r.requested|floatformat:2 }}</td>
+                            <td class="text-right">
+                                <span class="badge badge-light px-2 py-1">{{ r.approved|floatformat:2 }}</span>
+                            </td>
+                            <td class="text-right">{{ r.consumed|floatformat:2 }}</td>
+                            <td class="text-right pr-4">
+                                {% if r.variance > 0 %}
+                                    <span class="variance-pos"><i class="fas fa-caret-up mr-1"></i>{{ r.variance|floatformat:2 }}</span>
+                                {% elif r.variance < 0 %}
+                                    <span class="variance-neg"><i class="fas fa-caret-down mr-1"></i>{{ r.variance|floatformat:2 }}</span>
+                                {% else %}
+                                    <span class="variance-zero">{{ r.variance|floatformat:2 }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="fas fa-folder-open fa-3x mb-3 d-block"></i>
+                                {% trans "No data found for the selected period." %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
