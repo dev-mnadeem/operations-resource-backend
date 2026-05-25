@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.inventory.models import BranchInventory
+from apps.permissions import visible_branch_codes
 from apps.replenishment.service import (
     DEFAULT_HISTORY_DAYS,
     DEFAULT_LEAD_TIME_DAYS,
@@ -17,7 +18,12 @@ from apps.replenishment.service import (
 
 
 class ReplenishmentAdviceView(APIView):
-    """Stock ranked by how soon it runs out, with a reorder quantity."""
+    """
+    Stock ranked by how soon it runs out, with a reorder quantity.
+
+    Admins see every branch; other users see their own branch and, for
+    purchasers, the branches they buy for.
+    """
 
     permission_classes = [IsAuthenticated]
 
@@ -25,7 +31,11 @@ class ReplenishmentAdviceView(APIView):
         operation_id="replenishment_advice",
         summary="Rank stock by stockout risk with reorder recommendations",
         parameters=[
-            OpenApiParameter("branch", str, description="Branch code to filter by."),
+            OpenApiParameter(
+                "branch",
+                str,
+                description="Branch code to filter by, within the branches you can see.",
+            ),
             OpenApiParameter(
                 "lead_time_days",
                 int,
@@ -68,11 +78,16 @@ class ReplenishmentAdviceView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if lead_time < 1:
-            return Response(
-                {"detail": "lead_time_days must be at least 1."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        for name, value in (
+            ("lead_time_days", lead_time),
+            ("history_days", history_days),
+            ("limit", limit),
+        ):
+            if value < 1:
+                return Response(
+                    {"detail": f"{name} must be at least 1."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         if not 0 < service_level < 1:
             return Response(
                 {
@@ -82,7 +97,9 @@ class ReplenishmentAdviceView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        queryset = BranchInventory.objects.all()
+        queryset = BranchInventory.objects.filter(
+            branch__in=visible_branch_codes(request.user)
+        )
         branch = request.query_params.get("branch")
         if branch:
             queryset = queryset.filter(branch__branch_code=branch)

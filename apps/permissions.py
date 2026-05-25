@@ -42,3 +42,18 @@ def has_any_role(user, *role_names):
 def get_user_roles(user):
     """Get list of role names for a user."""
     return list(user.groups.values_list("name", flat=True))
+
+
+def visible_branch_codes(user):
+    """
+    Branch codes whose stock `user` may see: every branch for admins,
+    otherwise the user's own branch plus any branches they purchase for.
+    """
+    from apps.branch.models import Branch
+
+    if is_admin(user):
+        return set(Branch.objects.values_list("pk", flat=True))
+    codes = set(user.purchaser_branches.values_list("pk", flat=True))
+    if user.branch_id:
+        codes.add(user.branch_id)
+    return codes

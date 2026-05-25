@@ -23,6 +23,7 @@ from django.http import HttpResponseRedirect
 from django.utils import timezone
 from django.utils.html import format_html
 
+from apps.permissions import visible_branch_codes
 from apps.replenishment.models import ReplenishmentAdvice
 from apps.replenishment.service import (
     DEFAULT_HISTORY_DAYS,
@@ -93,8 +94,11 @@ class ReplenishmentAdviceAdmin(admin.ModelAdmin):
                 demand_total=Coalesce(
                     Sum(
                         "item__consumptions__quantity_consumed",
+                        # Only this row's branch: without it every branch
+                        # was ranked on the whole chain's demand.
                         filter=Q(
-                            item__consumptions__sales_transaction__occurred_at__date__gte=window_start
+                            item__consumptions__sales_transaction__occurred_at__date__gte=window_start,
+                            item__consumptions__sales_transaction__branch=F("branch"),
                         ),
                     ),
                     Value(0),
@@ -112,7 +116,7 @@ class ReplenishmentAdviceAdmin(admin.ModelAdmin):
             )
             .order_by("days_of_cover")
         )
-        return queryset
+        return queryset.filter(branch__in=visible_branch_codes(request.user))
 
     def _profile(self, request, obj):
         cache = getattr(request, CACHE_ATTR, None)
