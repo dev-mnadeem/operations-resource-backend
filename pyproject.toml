@@ -1,0 +1,61 @@
+[project]
+name = "arcadian-be"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=6.0.1,<7.0",
+    "django-filter>=25.2,<26.0",
+    "djangorestframework>=3.16.1,<4.0",
+    "python-dotenv>=1.2.1,<2.0",
+    "ruff>=0.14.14,<1.0",
+    "django-jazzmin>=3.0.0,<4.0",
+    "drf-spectacular>=0.29.0,<0.30",
+    "psycopg2-binary>=2.9.11,<3.0",
+    "pre-commit>=3.8.0,<4.0",
+    "gunicorn>=21.0,<23.0",
+    "dj-database-url>=2.0,<3.0",
+    "whitenoise>=6.0,<7.0",
+    "pandas",
+    "xlrd",
+    "celery<5.5",
+    "redis",
+    "faker",
+    "cloudinary>=1.36.0,<2.0",
+    "django-cloudinary-storage>=0.3.0,<1.0",
+    "python-barcode>=0.16.1",
+]
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = [
+    "migrations",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "F",      # pyflakes
+    "I",      # isort
+    "DJ",     # Django
+    "UP",     # pyupgrade
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "ARG",    # flake8-unused-arguments
+    "PTH",    # flake8-use-pathlib
+]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+"migrations/*" = ["ALL"]  # Ignore all rules in migrations
+"*/migrations/*" = ["ALL"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+

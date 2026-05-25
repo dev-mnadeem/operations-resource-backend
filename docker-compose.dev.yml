@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5433:5432" # exposed on 5433 so it doesn't clash with a local postgres instance
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: "True"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost,web}
+      DB_ENGINE: ${DB_ENGINE:-django.db.backends.postgresql}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db          # always point at the compose db service
+      DB_PORT: ${DB_PORT:-5432}
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the whole repo into the container so Django's auto-reloader
+      # picks up every file change without a rebuild.
+      - .:/app
+      # Keep the container's site-packages separate so a local venv
+      # (if present) doesn't shadow the installed dependencies.
+      - /app/.venv
+    command: uv run python manage.py runserver 0.0.0.0:8000
+
+volumes:
+  postgres_data_dev:
