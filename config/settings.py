@@ -142,6 +142,12 @@ STATICFILES_DIRS = [
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Jazzmin 3.0.3+ renders {% static 'vendor/bootswatch' %}, a directory,
+# as the base for its theme switcher. A directory has no manifest entry, so
+# strict lookup made every admin page a 500. Unknown names fall back to the
+# unhashed URL instead.
+WHITENOISE_MANIFEST_STRICT = False
+
 # Media files
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
