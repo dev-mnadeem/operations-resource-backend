@@ -5,8 +5,9 @@ Signals for transfers app automation.
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db.models import Q
-from django.db.models.signals import post_save
+from django.db import transaction
+from django.db.models import F, Q
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from apps.permissions import (
@@ -71,78 +72,76 @@ def _notify_transfer_dispatched(transfer):
         Notification.objects.create(user_id=uid, **notification_kwargs)
 
 
+def _move_stock(*, branch, warehouse, inventory_item, delta):
+    """Add `delta` (negative to deduct) to one location's stock, in SQL."""
+    if branch is not None:
+        from apps.inventory.models import BranchInventory
+
+        BranchInventory.objects.get_or_create(branch=branch, item=inventory_item)
+        BranchInventory.objects.filter(branch=branch, item=inventory_item).update(
+            quantity=F("quantity") + delta
+        )
+    elif warehouse is not None:
+        from apps.warehouse.models import WarehouseInventory
+
+        WarehouseInventory.objects.get_or_create(
+            warehouse=warehouse,
+            inventory_item=inventory_item,
+            defaults={"quantity": Decimal("0")},
+        )
+        WarehouseInventory.objects.filter(
+            warehouse=warehouse, inventory_item=inventory_item
+        ).update(quantity=F("quantity") + delta)
+
+
+@receiver(pre_save, sender=Transfer)
+def remember_previous_transfer_status(instance, **_kwargs):
+    instance._previous_status = (
+        Transfer.objects.filter(pk=instance.pk).values_list("status", flat=True).first()
+        if instance.pk
+        else None
+    )
+
+
 @receiver(post_save, sender=Transfer)
 def update_inventory_on_transfer(instance, created, **_kwargs):
     """
-    Automatically update inventory when transfer is dispatched or received.
+    Move stock when a transfer becomes dispatched (out of the source) or
+    received (into the destination).
+
+    Only the status change moves stock. Saving a dispatched or received
+    transfer again, e.g. to edit its notes, must not move it a second time.
     """
-    if created:
-        return  # Only process status changes, not creation
+    if created or getattr(instance, "_previous_status", None) == instance.status:
+        return
 
-    # Check if status changed to DISPATCHED
     if instance.status == Transfer.STATUS_DISPATCHED:
-        # Deduct from source location
-        for item in instance.items.all():
-            inventory_item = item.inventory_item
-            dispatched_qty = (
-                item.dispatched_quantity if item.dispatched_quantity else item.quantity
-            )
-
-            # Update source inventory
-            if instance.from_branch:
-                # Deduct from branch inventory
-                from apps.inventory.models import BranchInventory
-
-                branch_inv = BranchInventory.objects.filter(
-                    branch=instance.from_branch, item=inventory_item
-                ).first()
-                if branch_inv:
-                    branch_inv.quantity -= dispatched_qty
-                    branch_inv.save(update_fields=["quantity"])
-            elif instance.from_warehouse:
-                # Deduct from warehouse inventory
-                from apps.warehouse.models import WarehouseInventory
-
-                warehouse_inventory, _ = WarehouseInventory.objects.get_or_create(
-                    warehouse=instance.from_warehouse,
-                    inventory_item=inventory_item,
-                    defaults={"quantity": Decimal("0")},
+        with transaction.atomic():
+            for item in instance.items.select_related("inventory_item"):
+                qty = (
+                    item.dispatched_quantity
+                    if item.dispatched_quantity is not None
+                    else item.quantity
                 )
-                warehouse_inventory.quantity -= dispatched_qty
-                warehouse_inventory.save()
-
-    # Notify destination when dispatched
-    if instance.status == Transfer.STATUS_DISPATCHED:
+                _move_stock(
+                    branch=instance.from_branch,
+                    warehouse=instance.from_warehouse,
+                    inventory_item=item.inventory_item,
+                    delta=-qty,
+                )
         _notify_transfer_dispatched(instance)
 
-    # Check if status changed to RECEIVED
     elif instance.status == Transfer.STATUS_RECEIVED:
-        # Add to destination location
-        for item in instance.items.all():
-            inventory_item = item.inventory_item
-            received_qty = (
-                item.received_quantity if item.received_quantity else item.quantity
-            )
-
-            # Update destination inventory
-            if instance.to_branch:
-                # Add to branch inventory
-                from apps.inventory.models import BranchInventory
-
-                branch_inv, _ = BranchInventory.objects.get_or_create(
+        with transaction.atomic():
+            for item in instance.items.select_related("inventory_item"):
+                qty = (
+                    item.received_quantity
+                    if item.received_quantity is not None
+                    else item.quantity
+                )
+                _move_stock(
                     branch=instance.to_branch,
-                    item=inventory_item,
-                )
-                branch_inv.quantity += received_qty
-                branch_inv.save(update_fields=["quantity"])
-            elif instance.to_warehouse:
-                # Add to warehouse inventory
-                from apps.warehouse.models import WarehouseInventory
-
-                warehouse_inventory, _ = WarehouseInventory.objects.get_or_create(
                     warehouse=instance.to_warehouse,
-                    inventory_item=inventory_item,
-                    defaults={"quantity": Decimal("0")},
+                    inventory_item=item.inventory_item,
+                    delta=qty,
                 )
-                warehouse_inventory.quantity += received_qty
-                warehouse_inventory.save()
