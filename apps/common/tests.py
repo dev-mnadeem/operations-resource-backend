@@ -82,6 +82,14 @@ class SnapshotScopeTests(TestCase):
             self.client.get(reverse("common:snapshot")).status_code, (401, 403)
         )
 
+    def test_a_token_header_is_refused_not_a_server_error(self):
+        # TokenAuthentication was configured without rest_framework.authtoken,
+        # so any "Authorization: Token ..." request raised a 500.
+        response = self.client.get(
+            reverse("common:snapshot"), HTTP_AUTHORIZATION="Token abc"
+        )
+        self.assertIn(response.status_code, (401, 403))
+
     def test_ping_is_public_and_uncached(self):
         response = self.client.get(reverse("common:ping"))
         self.assertEqual(response.json(), {"ok": True})
