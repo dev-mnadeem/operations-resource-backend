@@ -1,0 +1,232 @@
+name: Django Conventions Check
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+      - master
+  push:
+    branches:
+      - main
+      - develop
+      - master
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  django-conventions:
+    name: Django Coding Conventions
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      
+      - name: Install dependencies
+        run: uv sync
+      
+      - name: Run Ruff with Django rules
+        run: |
+          uv run ruff check . --output-format=github
+      
+      - name: Check Django-specific conventions
+        run: |
+          echo "## Django Conventions Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check directory structure
+          echo "### 📁 Directory Structure Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          ERRORS=0
+          
+          # Check if apps directory exists
+          if [ ! -d "apps" ]; then
+            echo "❌ **Error**: \`apps/\` directory not found" >> $GITHUB_STEP_SUMMARY
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ \`apps/\` directory exists" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check if config directory exists
+          if [ ! -d "config" ]; then
+            echo "❌ **Error**: \`config/\` directory not found" >> $GITHUB_STEP_SUMMARY
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ \`config/\` directory exists" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check manage.py exists
+          if [ ! -f "manage.py" ]; then
+            echo "❌ **Error**: \`manage.py\` not found in root" >> $GITHUB_STEP_SUMMARY
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ \`manage.py\` exists" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check Django apps structure
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Django Apps Structure" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          for app_dir in apps/*/; do
+            if [ -d "$app_dir" ] && [ "$(basename "$app_dir")" != "__pycache__" ]; then
+              APP_NAME=$(basename "$app_dir")
+              echo "Checking app: **$APP_NAME**" >> $GITHUB_STEP_SUMMARY
+              
+              # Required files for Django app
+              REQUIRED_FILES=("__init__.py" "apps.py" "models.py" "admin.py" "views.py" "tests.py")
+              for file in "${REQUIRED_FILES[@]}"; do
+                if [ ! -f "$app_dir$file" ]; then
+                  echo "  ⚠️ Missing: \`$file\` (recommended)" >> $GITHUB_STEP_SUMMARY
+                else
+                  echo "  ✅ \`$file\` exists" >> $GITHUB_STEP_SUMMARY
+                fi
+              done
+              
+              # Check migrations directory
+              if [ ! -d "$app_dir/migrations" ]; then
+                echo "  ⚠️ Missing: \`migrations/\` directory" >> $GITHUB_STEP_SUMMARY
+              else
+                if [ ! -f "$app_dir/migrations/__init__.py" ]; then
+                  echo "  ❌ Missing: \`migrations/__init__.py\`" >> $GITHUB_STEP_SUMMARY
+                  ERRORS=$((ERRORS + 1))
+                else
+                  echo "  ✅ \`migrations/\` directory exists" >> $GITHUB_STEP_SUMMARY
+                fi
+              fi
+              
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          # Check config directory structure
+          echo "### ⚙️ Config Directory Structure" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          CONFIG_FILES=("settings.py" "urls.py" "wsgi.py" "asgi.py")
+          for file in "${CONFIG_FILES[@]}"; do
+            if [ ! -f "config/$file" ]; then
+              echo "❌ Missing: \`config/$file\`" >> $GITHUB_STEP_SUMMARY
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "✅ \`config/$file\` exists" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check naming conventions
+          echo "### 📝 Naming Conventions Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for lowercase app names
+          for app_dir in apps/*/; do
+            if [ -d "$app_dir" ]; then
+              APP_NAME=$(basename "$app_dir")
+              if [[ "$APP_NAME" =~ [A-Z] ]]; then
+                echo "⚠️ App name \`$APP_NAME\` contains uppercase letters (Django convention: use lowercase)" >> $GITHUB_STEP_SUMMARY
+              else
+                echo "✅ App name \`$APP_NAME\` follows naming convention" >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          done
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for common Django issues
+          echo "### 🔍 Django Best Practices" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if settings.py has SECRET_KEY
+          if grep -q "SECRET_KEY" config/settings.py 2>/dev/null; then
+            if grep -q "SECRET_KEY.*=.*['\"].*['\"]" config/settings.py 2>/dev/null && ! grep -q "os.getenv\|os.environ" config/settings.py 2>/dev/null; then
+              echo "⚠️ **Warning**: SECRET_KEY might be hardcoded. Consider using environment variables." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ SECRET_KEY uses environment variables" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          
+          # Check for DEBUG in settings
+          if grep -q "DEBUG\s*=\s*True" config/settings.py 2>/dev/null && ! grep -q "os.getenv\|os.environ" config/settings.py 2>/dev/null; then
+            echo "⚠️ **Warning**: DEBUG might be hardcoded to True. Use environment variables for production." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check for .env file in git (should be ignored)
+          if git ls-files | grep -q "\.env$"; then
+            echo "❌ **Error**: \`.env\` file is tracked in git. It should be in .gitignore" >> $GITHUB_STEP_SUMMARY
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ \`.env\` file is not tracked in git" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check for .env.example
+          if [ ! -f ".env.example" ]; then
+            echo "⚠️ **Suggestion**: Consider adding \`.env.example\` file for documentation" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ \`.env.example\` exists" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Summary
+          echo "### 📊 Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ $ERRORS -eq 0 ]; then
+            echo "✅ All critical checks passed!" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ Found $ERRORS critical error(s). Please fix them." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+      
+      - name: Run Django system check
+        run: |
+          uv run python manage.py check --deploy || true
+        continue-on-error: true
+      
+      - name: Check for Django migrations
+        run: |
+          echo "## Django Migrations Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if there are unapplied migrations
+          uv run python manage.py makemigrations --check --dry-run > /tmp/migrations_check.txt 2>&1
+          if grep -q "No changes detected" /tmp/migrations_check.txt; then
+            echo "✅ No new migrations needed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Warning**: Unapplied model changes detected. Run \`python manage.py makemigrations\`" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/migrations_check.txt >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
+      
+      - name: Validate Python imports
+        run: |
+          echo "## Python Import Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for common import issues
+          if uv run python -c "import django; import rest_framework" 2>/dev/null; then
+            echo "✅ Django and DRF imports are valid" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Import validation failed" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+        continue-on-error: true
