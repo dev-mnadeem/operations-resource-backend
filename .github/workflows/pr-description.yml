@@ -1,0 +1,268 @@
+name: Auto-generate PR Description
+
+on:
+  pull_request:
+    types: [opened, synchronize, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  generate-description:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fetch base branch
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }}:${{ github.event.pull_request.base.ref }}
+
+      - name: Generate PR Description
+        id: pr-description
+        run: |
+          BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          
+          # Initialize description file
+          echo "# Pull Request Description" > pr_description.md
+          echo "" >> pr_description.md
+          
+          # Get PR metadata
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          PR_CREATED="${{ github.event.pull_request.created_at }}"
+          
+          # Get commit count and time span
+          COMMIT_COUNT=$(git rev-list --count ${BASE_SHA}..${HEAD_SHA} 2>/dev/null || echo "0")
+          FIRST_COMMIT_DATE=$(git log --format="%ai" ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | tail -1)
+          LAST_COMMIT_DATE=$(git log --format="%ai" ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | head -1)
+          
+          # Get all commits with detailed info
+          echo "## 📝 Commits ($COMMIT_COUNT)" >> pr_description.md
+          echo "" >> pr_description.md
+          if [ "$COMMIT_COUNT" -gt 0 ]; then
+            git log --pretty=format:"- **%h** (%ar): %s%n  - Author: %an <%ae>" ${BASE_SHA}..${HEAD_SHA} >> pr_description.md 2>/dev/null
+            echo "" >> pr_description.md
+            if [ -n "$FIRST_COMMIT_DATE" ] && [ -n "$LAST_COMMIT_DATE" ]; then
+              echo "**Time span**: $FIRST_COMMIT_DATE → $LAST_COMMIT_DATE" >> pr_description.md
+              echo "" >> pr_description.md
+            fi
+          else
+            echo "- No commits found" >> pr_description.md
+            echo "" >> pr_description.md
+          fi
+          
+          # Get authors breakdown
+          echo "## 👥 Contributors" >> pr_description.md
+          echo "" >> pr_description.md
+          AUTHORS=$(git log --pretty=format:"%an" ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | sort -u)
+          if [ -n "$AUTHORS" ]; then
+            echo "$AUTHORS" | while read author; do
+              COMMITS_BY_AUTHOR=$(git log --pretty=format:"%an" ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | grep -c "$author" || echo "0")
+              echo "- **$author**: $COMMITS_BY_AUTHOR commit(s)" >> pr_description.md
+            done
+          else
+            echo "- No contributors found" >> pr_description.md
+          fi
+          echo "" >> pr_description.md
+          
+          # Get detailed file changes with line counts
+          echo "## 📁 Changed Files" >> pr_description.md
+          echo "" >> pr_description.md
+          CHANGED_FILES=$(git diff --name-status --diff-filter=ACDMR ${BASE_SHA}..${HEAD_SHA} 2>/dev/null)
+          if [ -n "$CHANGED_FILES" ]; then
+            # Count file types
+            ADDED_COUNT=$(echo "$CHANGED_FILES" | grep -c "^A" || echo "0")
+            MODIFIED_COUNT=$(echo "$CHANGED_FILES" | grep -c "^M" || echo "0")
+            DELETED_COUNT=$(echo "$CHANGED_FILES" | grep -c "^D" || echo "0")
+            RENAMED_COUNT=$(echo "$CHANGED_FILES" | grep -c "^R" || echo "0")
+            
+            echo "$CHANGED_FILES" | while IFS=$'\t' read -r status file; do
+              # Get line changes for each file
+              if [ "$status" != "D" ]; then
+                FILE_STATS=$(git diff --numstat ${BASE_SHA}..${HEAD_SHA} -- "$file" 2>/dev/null | head -1)
+                if [ -n "$FILE_STATS" ]; then
+                  ADDITIONS=$(echo "$FILE_STATS" | awk '{print $1}')
+                  DELETIONS=$(echo "$FILE_STATS" | awk '{print $2}')
+                  ADDITIONS=${ADDITIONS:-0}
+                  DELETIONS=${DELETIONS:-0}
+                else
+                  ADDITIONS=0
+                  DELETIONS=0
+                fi
+                
+                case $status in
+                  A*) 
+                    echo "- ➕ **Added**: \`$file\` (+$ADDITIONS lines)" >> pr_description.md
+                    ;;
+                  M*) 
+                    NET_CHANGE=$((ADDITIONS - DELETIONS))
+                    if [ $NET_CHANGE -gt 0 ]; then
+                      echo "- ✏️ **Modified**: \`$file\` (+$ADDITIONS, -$DELETIONS, net +$NET_CHANGE)" >> pr_description.md
+                    elif [ $NET_CHANGE -lt 0 ]; then
+                      echo "- ✏️ **Modified**: \`$file\` (+$ADDITIONS, -$DELETIONS, net $NET_CHANGE)" >> pr_description.md
+                    else
+                      echo "- ✏️ **Modified**: \`$file\` (+$ADDITIONS, -$DELETIONS)" >> pr_description.md
+                    fi
+                    ;;
+                  D*) 
+                    echo "- ❌ **Deleted**: \`$file\`" >> pr_description.md
+                    ;;
+                  R*) 
+                    OLD_FILE=$(echo "$file" | cut -f1)
+                    NEW_FILE=$(echo "$file" | cut -f2)
+                    echo "- 🔄 **Renamed**: \`$OLD_FILE\` → \`$NEW_FILE\`" >> pr_description.md
+                    ;;
+                  C*) 
+                    echo "- 📋 **Copied**: \`$file\`" >> pr_description.md
+                    ;;
+                  *) 
+                    echo "- 📝 **Changed**: \`$file\`" >> pr_description.md
+                    ;;
+                esac
+              else
+                echo "- ❌ **Deleted**: \`$file\`" >> pr_description.md
+              fi
+            done
+            echo "" >> pr_description.md
+            echo "**Summary**: $ADDED_COUNT added, $MODIFIED_COUNT modified, $DELETED_COUNT deleted, $RENAMED_COUNT renamed" >> pr_description.md
+          else
+            echo "- No files changed" >> pr_description.md
+          fi
+          echo "" >> pr_description.md
+          
+          # File type breakdown
+          echo "## 📊 File Type Breakdown" >> pr_description.md
+          echo "" >> pr_description.md
+          FILE_TYPES=$(git diff --name-only ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | sed 's/.*\.//' | sort | uniq -c | sort -rn | head -10)
+          if [ -n "$FILE_TYPES" ]; then
+            echo "$FILE_TYPES" | while read count ext; do
+              if [ -n "$ext" ]; then
+                echo "- **.$ext**: $count file(s)" >> pr_description.md
+              else
+                echo "- **No extension**: $count file(s)" >> pr_description.md
+              fi
+            done
+          else
+            echo "- No file type data available" >> pr_description.md
+          fi
+          echo "" >> pr_description.md
+          
+          # Directory structure
+          echo "## 📂 Affected Directories" >> pr_description.md
+          echo "" >> pr_description.md
+          DIRS=$(git diff --name-only ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | xargs -I {} dirname {} | sort -u | grep -v '^\.$')
+          if [ -n "$DIRS" ]; then
+            echo "$DIRS" | while read dir; do
+              FILES_IN_DIR=$(git diff --name-only ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | grep "^$dir/" | wc -l)
+              echo "- \`$dir/\`: $FILES_IN_DIR file(s)" >> pr_description.md
+            done
+          else
+            echo "- Root directory changes" >> pr_description.md
+          fi
+          echo "" >> pr_description.md
+          
+          # Get detailed statistics
+          echo "## 📈 Detailed Statistics" >> pr_description.md
+          echo "" >> pr_description.md
+          STATS=$(git diff --shortstat ${BASE_SHA}..${HEAD_SHA} 2>/dev/null)
+          if [ -n "$STATS" ]; then
+            echo "- **Overall**: $STATS" >> pr_description.md
+            echo "" >> pr_description.md
+            
+            # Get insertions and deletions
+            TOTAL_ADDITIONS=$(git diff --shortstat ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
+            TOTAL_DELETIONS=$(git diff --shortstat ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' || echo "0")
+            TOTAL_FILES=$(git diff --name-only ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | wc -l)
+            
+            if [ -n "$TOTAL_ADDITIONS" ] && [ -n "$TOTAL_DELETIONS" ]; then
+              NET_CHANGE=$((TOTAL_ADDITIONS - TOTAL_DELETIONS))
+              echo "- **Lines changed**: +$TOTAL_ADDITIONS / -$TOTAL_DELETIONS (net: $NET_CHANGE)" >> pr_description.md
+              echo "- **Files changed**: $TOTAL_FILES" >> pr_description.md
+              
+              if [ $TOTAL_ADDITIONS -gt 0 ]; then
+                AVG_ADDITIONS=$((TOTAL_ADDITIONS / TOTAL_FILES))
+                echo "- **Average additions per file**: ~$AVG_ADDITIONS lines" >> pr_description.md
+              fi
+            fi
+          else
+            echo "- No changes detected" >> pr_description.md
+          fi
+          echo "" >> pr_description.md
+          
+          # Detect special file types
+          echo "## 🔍 Change Analysis" >> pr_description.md
+          echo "" >> pr_description.md
+          HAS_MIGRATIONS=$(git diff --name-only ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | grep -c "migrations/" || echo "0")
+          HAS_TESTS=$(git diff --name-only ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | grep -E "(test_|_test\.|tests/)" | wc -l)
+          HAS_CONFIG=$(git diff --name-only ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | grep -E "(config|settings|\.env|pyproject\.toml|requirements)" | wc -l)
+          HAS_DOCS=$(git diff --name-only ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | grep -E "(README|\.md|docs/)" | wc -l)
+          
+          if [ "$HAS_MIGRATIONS" -gt 0 ]; then
+            echo "- ✅ **Database migrations** detected ($HAS_MIGRATIONS file(s))" >> pr_description.md
+          fi
+          if [ "$HAS_TESTS" -gt 0 ]; then
+            echo "- ✅ **Test files** modified ($HAS_TESTS file(s))" >> pr_description.md
+          fi
+          if [ "$HAS_CONFIG" -gt 0 ]; then
+            echo "- ⚠️ **Configuration files** changed ($HAS_CONFIG file(s)) - Review carefully" >> pr_description.md
+          fi
+          if [ "$HAS_DOCS" -gt 0 ]; then
+            echo "- 📚 **Documentation** updated ($HAS_DOCS file(s))" >> pr_description.md
+          fi
+          if [ "$HAS_MIGRATIONS" -eq 0 ] && [ "$HAS_TESTS" -eq 0 ] && [ "$HAS_CONFIG" -eq 0 ] && [ "$HAS_DOCS" -eq 0 ]; then
+            echo "- Code changes only" >> pr_description.md
+          fi
+          echo "" >> pr_description.md
+          
+          # Generate summary from commit messages
+          echo "## 📋 Summary" >> pr_description.md
+          echo "" >> pr_description.md
+          COMMIT_SUMMARY=$(git log --pretty=format:"%s" ${BASE_SHA}..${HEAD_SHA} 2>/dev/null | head -10 | sed 's/^/- /')
+          if [ -n "$COMMIT_SUMMARY" ]; then
+            echo "$COMMIT_SUMMARY" >> pr_description.md
+          else
+            echo "This PR includes updates based on the commit messages above." >> pr_description.md
+          fi
+          echo "" >> pr_description.md
+          
+          # Add a separator and note
+          echo "---" >> pr_description.md
+          echo "" >> pr_description.md
+          echo "*This description was automatically generated from commit messages and code changes.*" >> pr_description.md
+
+      - name: Update PR Description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const description = fs.readFileSync('pr_description.md', 'utf8');
+            
+            // Get current PR description
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            
+            // Only update if description is empty or was auto-generated
+            const currentDescription = pr.body || '';
+            const isAutoGenerated = currentDescription.includes('*This description was automatically generated');
+            
+            if (!currentDescription || isAutoGenerated) {
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.issue.number,
+                body: description,
+              });
+              console.log('PR description updated successfully');
+            } else {
+              console.log('PR description already exists and was not auto-generated. Skipping update.');
+            }
