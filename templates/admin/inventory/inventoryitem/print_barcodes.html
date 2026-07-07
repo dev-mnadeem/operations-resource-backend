@@ -1,0 +1,108 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    @media print {
+      .no-print { display: none !important; }
+      body { margin: 0; }
+      .barcode-grid { display: flex; flex-wrap: wrap; }
+    }
+    .barcode-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px;
+    }
+    .barcode-label {
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 12px 16px;
+      width: 220px;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+    .barcode-label .item-name {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 4px;
+      word-break: break-word;
+    }
+    .barcode-label .item-sku {
+      font-size: 0.65rem;
+      color: #666;
+      margin-bottom: 6px;
+    }
+    .barcode-label .barcode-visual {
+      margin-bottom: 4px;
+      min-height: 56px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .barcode-label .barcode-visual img {
+      width: 100%;
+      max-width: 180px;
+      height: auto;
+    }
+    .barcode-label .barcode-value {
+      font-size: 0.6rem;
+      font-family: monospace;
+      color: #555;
+      letter-spacing: 0.05em;
+    }
+    .barcode-label .no-barcode {
+      font-size: 0.7rem;
+      color: #aaa;
+      font-style: italic;
+      padding: 10px 0;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="no-print" style="padding: 16px;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h4 mb-0">{% trans "Barcode Labels" %} — {{ labels|length }} {% trans "item(s)" %}</h1>
+      <div>
+        <button onclick="window.print()" class="btn btn-primary mr-2">
+          <i class="fas fa-print"></i> {% trans "Print" %}
+        </button>
+        <a href="{% url 'admin:inventory_inventoryitem_changelist' %}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i> {% trans "Back" %}
+        </a>
+      </div>
+    </div>
+    <p class="text-muted small">
+      {% trans "Items without a barcode are shown with their SKU. Assign barcodes in the item edit page." %}
+    </p>
+  </div>
+
+  <div class="barcode-grid">
+    {% for label in labels %}
+      <div class="barcode-label">
+        {% with item=label.item %}
+        <div class="item-name">{{ item.name }}</div>
+        {% if item.sku %}
+          <div class="item-sku">SKU: {{ item.sku }}</div>
+        {% endif %}
+        {% if label.barcode_svg_data_uri %}
+          <div class="barcode-visual">
+            <img src="{{ label.barcode_svg_data_uri }}" alt="Code 128 barcode for {{ label.barcode_value }}">
+          </div>
+          <div class="barcode-value">{{ label.barcode_value }}</div>
+        {% elif label.barcode_value %}
+          <div class="barcode-value">{{ label.barcode_value }}</div>
+        {% else %}
+          <div class="no-barcode">{% trans "No barcode assigned" %}</div>
+        {% endif %}
+        {% if item.unit %}
+          <div class="item-sku" style="margin-top:4px;">{{ item.unit.name }}</div>
+        {% endif %}
+        {% endwith %}
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
