@@ -1,0 +1,96 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a> &rsaquo;
+    <a href="{% url 'admin:payments_payment_changelist' %}">{% trans 'Payments' %}</a> &rsaquo;
+    {% trans 'Reconciliation' %}
+  </div>
+{% endblock %}
+
+{% block content %}
+<section class="content">
+  <div class="container-fluid">
+    <div class="row mb-3">
+      <div class="col-12 d-flex justify-content-between align-items-center">
+        <h1 class="h3 mb-0">{% trans "Payment Reconciliation" %}</h1>
+        <a href="{% url 'admin:payments_payment_changelist' %}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i> {% trans "Back to Payments" %}
+        </a>
+      </div>
+    </div>
+
+    <div class="row mb-4">
+      <div class="col-md-4">
+        <div class="small-box bg-info">
+          <div class="inner"><h3>{{ total_invoiced }}</h3><p>{% trans "Total Invoiced" %}</p></div>
+          <div class="icon"><i class="fas fa-file-invoice"></i></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="small-box bg-success">
+          <div class="inner"><h3>{{ total_paid }}</h3><p>{% trans "Total Paid" %}</p></div>
+          <div class="icon"><i class="fas fa-check-circle"></i></div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="small-box bg-danger">
+          <div class="inner"><h3>{{ total_outstanding }}</h3><p>{% trans "Outstanding" %}</p></div>
+          <div class="icon"><i class="fas fa-exclamation-circle"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3 class="card-title">{% trans "Invoice vs Payments" %}</h3></div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-bordered mb-0">
+          <thead class="thead-light">
+            <tr>
+              <th>{% trans "Invoice #" %}</th>
+              <th>{% trans "Vendor" %}</th>
+              <th>{% trans "PO" %}</th>
+              <th>{% trans "Due Date" %}</th>
+              <th class="text-right">{% trans "Invoiced" %}</th>
+              <th class="text-right">{% trans "Paid" %}</th>
+              <th class="text-right">{% trans "Outstanding" %}</th>
+              <th>{% trans "Status" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr {% if row.overdue %}class="table-danger"{% endif %}>
+                <td>
+                  <a href="{% url 'admin:payments_vendorinvoice_change' row.invoice.pk %}">
+                    {{ row.invoice.invoice_number }}
+                  </a>
+                </td>
+                <td>{{ row.invoice.vendor }}</td>
+                <td>{% if row.invoice.purchase_order %}#{{ row.invoice.purchase_order.pk }}{% else %}—{% endif %}</td>
+                <td>{% if row.invoice.due_date %}{{ row.invoice.due_date|date:"Y-m-d" }}{% else %}—{% endif %}{% if row.overdue %} <span class="badge badge-danger">overdue</span>{% endif %}</td>
+                <td class="text-right">{{ row.invoice.amount }}</td>
+                <td class="text-right">{{ row.paid }}</td>
+                <td class="text-right {% if row.outstanding > 0 %}text-danger font-weight-bold{% else %}text-success{% endif %}">{{ row.outstanding }}</td>
+                <td><span class="badge badge-{% if row.invoice.status == 'paid' %}success{% elif row.invoice.status == 'partial' %}warning{% else %}danger{% endif %}">{{ row.invoice.get_status_display }}</span></td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="8" class="text-center text-muted py-3">{% trans "No invoices found." %}</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="thead-light">
+            <tr>
+              <th colspan="4">{% trans "Totals" %}</th>
+              <th class="text-right">{{ total_invoiced }}</th>
+              <th class="text-right">{{ total_paid }}</th>
+              <th class="text-right {% if total_outstanding > 0 %}text-danger{% else %}text-success{% endif %}">{{ total_outstanding }}</th>
+              <th></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,167 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    #barcode-scanner-box { transition: border-color 0.2s; }
+    #barcode-scanner-box.scanning { border-color: #28a745 !important; }
+    .barcode-highlight td { background-color: rgba(255, 193, 7, 0.25) !important; outline: 2px solid #ffc107; }
+    tr.already-received td { background-color: rgba(40, 167, 69, 0.06) !important; }
+  </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo;
+    <a href="{% url 'admin:purchases_goodsreceipt_changelist' %}">{% trans 'Goods Receipts' %}</a>
+    &rsaquo;
+    {% blocktrans with pk=receipt.pk %}Receive — Receipt #{{ pk }}{% endblocktrans %}
+  </div>
+{% endblock %}
+
+{% block content %}
+<section class="content">
+  <div class="container-fluid">
+
+    {# Header #}
+    <div class="row mb-3">
+      <div class="col-12 d-flex justify-content-between align-items-center">
+        <h1 class="h3 mb-0">
+          {% blocktrans with pk=receipt.pk %}Receive Goods — Receipt #{{ pk }}{% endblocktrans %}
+        </h1>
+        <a href="{% url 'admin:purchases_goodsreceipt_change' receipt.pk %}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i> {% trans "Back" %}
+        </a>
+      </div>
+    </div>
+
+    {# Receipt summary #}
+    <div class="card card-outline card-info mb-3">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4"><strong>{% trans "Demand" %}:</strong> #{{ receipt.demand.pk }}</div>
+          <div class="col-md-4"><strong>{% trans "Branch" %}:</strong> {{ receipt.demand.branch }}</div>
+          <div class="col-md-4"><strong>{% trans "Status" %}:</strong> <span class="badge badge-info">{{ receipt.get_status_display }}</span></div>
+        </div>
+      </div>
+    </div>
+
+    {# Barcode Scanner #}
+    <div class="card card-outline card-primary mb-3" id="barcode-scanner-box">
+      <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-barcode mr-1"></i> {% trans "Barcode Scanner" %}</h3>
+      </div>
+      <div class="card-body">
+        <div class="input-group" style="max-width: 420px;">
+          <input type="text" id="barcode-input" class="form-control" placeholder="{% trans 'Scan barcode or enter SKU...' %}" autocomplete="off" autofocus>
+          <div class="input-group-append">
+            <span class="input-group-text"><i class="fas fa-qrcode"></i></span>
+          </div>
+        </div>
+        <small id="barcode-status" class="mt-1 d-block text-muted"></small>
+      </div>
+    </div>
+
+    {# Receive form #}
+    <form method="post" action="">
+      {% csrf_token %}
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">{% trans "Items to Receive" %}</h3>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-bordered mb-0">
+            <thead class="thead-light">
+              <tr>
+                <th>{% trans "Item" %}</th>
+                <th>{% trans "Barcode / SKU" %}</th>
+                <th class="text-right">{% trans "Expected" %}</th>
+                <th style="width: 160px;">{% trans "Received Qty" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ri in receipt_items %}
+                <tr id="row-{{ ri.pk }}"
+                    data-barcode="{{ ri.barcode }}"
+                    data-sku="{{ ri.sku }}"
+                    data-item-id="{{ ri.pk }}"
+                    {% if ri.received_quantity %}class="already-received"{% endif %}>
+                  <td>{{ ri.inventory_item.name }}</td>
+                  <td class="text-muted small">
+                    {% if ri.barcode %}{{ ri.barcode }}{% elif ri.sku %}{{ ri.sku }}{% else %}—{% endif %}
+                  </td>
+                  <td class="text-right">{{ ri.expected_quantity }} {{ ri.inventory_item.unit.abbreviation }}</td>
+                  <td>
+                    <input type="number"
+                           id="received_{{ ri.pk }}"
+                           name="received_{{ ri.pk }}"
+                           class="form-control form-control-sm"
+                           step="0.01" min="0"
+                           value="{{ ri.received_quantity|default:'' }}"
+                           placeholder="{{ ri.expected_quantity }}">
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="4" class="text-center text-muted py-3">{% trans "No items on this receipt." %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer text-right">
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-save"></i> {% trans "Save Received Quantities" %}
+          </button>
+        </div>
+      </div>
+    </form>
+
+  </div>
+</section>
+
+<script>
+(function () {
+  const barcodeInput = document.getElementById('barcode-input');
+  const statusEl = document.getElementById('barcode-status');
+  const scannerBox = document.getElementById('barcode-scanner-box');
+
+  function findRow(value) {
+    return document.querySelector(`tr[data-barcode="${value}"], tr[data-sku="${value}"]`);
+  }
+
+  function highlightRow(row) {
+    row.classList.add('barcode-highlight');
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const input = row.querySelector('input[type="number"]');
+    if (input) input.focus();
+    setTimeout(() => row.classList.remove('barcode-highlight'), 3000);
+  }
+
+  barcodeInput.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const value = barcodeInput.value.trim();
+    barcodeInput.value = '';
+    if (!value) return;
+
+    const row = findRow(value);
+    if (row) {
+      scannerBox.style.borderColor = '#28a745';
+      statusEl.textContent = 'Found: ' + row.querySelector('td').textContent.trim();
+      statusEl.style.color = '#28a745';
+      highlightRow(row);
+    } else {
+      scannerBox.style.borderColor = '#dc3545';
+      statusEl.textContent = 'Not found: ' + value;
+      statusEl.style.color = '#dc3545';
+    }
+    setTimeout(() => {
+      scannerBox.style.borderColor = '';
+      statusEl.textContent = '';
+      statusEl.style.color = '';
+    }, 3000);
+  });
+})();
+</script>
+{% endblock %}

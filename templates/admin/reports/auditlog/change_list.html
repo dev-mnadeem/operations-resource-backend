@@ -1,0 +1,57 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static %}
+
+{% block object-tools %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-outline card-primary shadow-sm">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-chart-pie mr-1"></i> {% trans "System Reports" %}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for report in report_links %}
+                            <div class="col-md-4 col-sm-6 mb-3">
+                                <a href="{{ report.url }}" class="btn btn-default btn-block text-left py-3 border shadow-none hover-shadow transition">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-circle bg-primary-light mr-3">
+                                            <i class="fas fa-file-alt text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <span class="d-block font-weight-bold text-gray-800">{{ report.name }}</span>
+                                            <span class="text-xs text-muted">{% trans "View detailed report" %}</span>
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .hover-shadow:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1) !important;
+            border-color: #007bff !important;
+            transform: translateY(-2px);
+        }
+        .transition {
+            transition: all 0.2s ease-in-out;
+        }
+        .bg-primary-light {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+        .icon-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+
+    {{ block.super }}
+{% endblock %}
