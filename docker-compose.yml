@@ -27,7 +27,7 @@ services:
       DB_HOST: db
       DB_PORT: ${DB_PORT:-5432}
     ports:
-      - "8000:8000"
+      - "${WEB_PORT:-8500}:8000"
     # Uncomment to mount source for live reload during development:
     volumes:
       - .:/app
@@ -35,8 +35,6 @@ services:
   redis:
     image: redis:7
     restart: unless-stopped
-    ports:
-      - "6379:6379"
 
   celery_worker:
     build: .
