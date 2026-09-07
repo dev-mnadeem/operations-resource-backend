@@ -923,22 +923,23 @@ class Command(BaseCommand):
                         )
                         sku_base = base_sku_prefix
                         counter = 1
-                        while (
-                            InventoryItem.objects.filter(sku=sku_base).exists()
-                            or InventoryItem.objects.filter(
-                                barcode=f"BC-{sku_base}"
-                            ).exists()
-                        ):
+                        while InventoryItem.objects.filter(sku=sku_base).exists():
                             sku_base = f"{base_sku_prefix}-{counter}"
                             counter += 1
 
+                        # The barcode is deliberately left blank: InventoryItem
+                        # generates a unique 8-character one on save, which is
+                        # what the column is sized for. This used to pass
+                        # barcode=f"BC-{sku_base}" — an SKU-length string into a
+                        # varchar(8) — so `manage.py setup_dev` died with
+                        # "value too long for type character varying(8)" and the
+                        # project could not be seeded at all.
                         item = InventoryItem.objects.create(
                             name=clean_readable_name,
                             sku=sku_base,
                             section=parent_cat,
                             category=sub_cat,
                             unit=unit,
-                            barcode=f"BC-{sku_base}",
                         )
 
                     items.append(item)

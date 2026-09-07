@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.branch",
     "apps.warehouse",
+    "apps.replenishment",
     "apps.inventory",
     "apps.sales",
     "apps.demands",
