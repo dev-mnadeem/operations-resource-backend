@@ -1,362 +1,221 @@
-# Arcadian ERP - Backend
+# Arcadian ERP
 
-This implies the backend service for the Arcadian ERP system. It is built using Django and Django Rest Framework, featuring a customized admin interface powered by Jazzmin.
+A Django ERP for a multi-branch food business: inventory, purchasing, sales,
+warehouse transfers, demands and reporting, behind a Jazzmin admin.
 
-## Table of Contents
+The work here added the thing an inventory system is actually for — **knowing
+what to reorder before you run out** — and fixed the reasons the project could
+not be started from a clean clone.
 
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Database Setup](#database-setup)
-- [Running the Project](#running-the-project)
-- [Data Seeding](#data-seeding)
-- [Deploying to Heroku](#deploying-to-heroku)
-- [Core Features & Modules](#core-features--modules)
-- [Code Quality & Linting](#code-quality--linting)
-- [Pre-commit Hooks](#pre-commit-hooks)
-- [CI/CD](#cicd)
-- [Project Structure](#project-structure)
+---
 
-## Prerequisites
+## Run it
 
-- [Python](https://www.python.org/) (>= 3.12)
-- [PostgreSQL](https://www.postgresql.org/) (Recommended database)
-- [uv](https://github.com/astral-sh/uv) (Recommended for dependency management)
-
-## Installation
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone <repository_url>
-   cd arcadian-be
-   ```
-
-2. **Set up the environment:**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   uv sync
-   ```
-   _Note: This project uses uv; a virtual environment is created automatically._
-
-## Environment Variables
-
-This project uses a `.env` file to store sensitive settings such as database credentials, secret keys, and other configuration variables.
-
-1. **Create your `.env` file**  
-    An example `.env` file is included as `.env.example`. Copy it and rename it to `.env`:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   or
-
-2. **Edit the** `.env` **file**
-   Open `.env` in your editor and update the variables as needed. Typical variables include:
-
-   ```bash
-   SECRET_KEY=your-secret-key
-
-   DB_NAME=your_db_name
-   DB_USER=your_db_user
-   DB_PASSWORD=your_db_password
-   DB_HOST=localhost
-   DB_PORT=5432
-
-   DEBUG=True
-   ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
-
-   JWT_ACCESS_TOKEN_MINUTES=60
-   JWT_REFRESH_TOKEN_DAYS=1
-   ```
-
-## Database Setup
-
-Ensure you have PostgreSQL installed and running.
-
-1.  **Access the PostgreSQL shell:**
-
-    ```bash
-    sudo -u postgres psql
-    ```
-
-2.  **Create the Database and User:**
-    
-    Execute the following SQL commands. Ensure the credentials match what you defined in your `.env` file.
-
-    ```sql
-    -- Create the database
-    CREATE DATABASE arcadian_erp;
-
-    -- Create the user with a password
-    CREATE USER erp_user WITH PASSWORD 'supersecretpassword';
-
-    -- Grant privileges
-    GRANT ALL PRIVILEGES ON DATABASE arcadian_erp TO erp_user;
-    
-    -- Optional: detailed configuration for the user
-    ALTER ROLE erp_user SET client_encoding TO 'utf8';
-    ALTER ROLE erp_user SET default_transaction_isolation TO 'read committed';
-    ALTER ROLE erp_user SET timezone TO 'UTC';
-    ```
-
-3.  **Exit psql:**
-
-    ```bash
-    \q
-    ```
-
-## Running the Project
-
-1. **Apply Migrations:**
-   Ensure your database is running and configured in `.env`, then run:
-
-   ```bash
-   python manage.py migrate
-   ```
-
-2. **Create a Superuser:**
-   To access the admin panel:
-
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-3. **Run the Development Server:**
-
-   ```bash
-   python manage.py runserver
-   ```
-
-   The server will start at `http://127.0.0.1:8000/`.
-
-## Data Seeding
-
-To quickly set up the project with realistic demo data, you can use the `seed_data` management command. This will create:
-- **Foundational Data**: Units of Measure (UOMs), Branches, Warehouses.
-- **Users & Groups**: Admin, Purchaser, Branch Manager, Receiver, Warehouse Manager.
-- **Inventory**: Items, Bill of Materials (BOMs).
-- **Supply Chain**: Vendors, Purchase Orders, Goods Receipts.
-- **Operations**: Sales Transactions, Inventory Transfers, Stock Adjustments.
-
-Run the seeding command:
 ```bash
-python manage.py seed_data
+cp .env.example .env
+docker compose up -d
+docker compose run --rm web uv run python manage.py migrate
+docker compose run --rm web uv run python manage.py setup_dev
+docker compose run --rm web uv run python manage.py seed_demand_history
 ```
 
-## Deploying to Heroku
+Then open **http://localhost:8500/admin** — `admin` / `admin1234`.
 
-The app is configured for Heroku with GitHub integration and Heroku Postgres.
+---
 
-1. **Create the Heroku app** (e.g. `pos-arcadian`): `heroku create pos-arcadian` or create it in the [Heroku dashboard](https://dashboard.heroku.com/).
+## Replenishment advice
 
-2. **Add Heroku Postgres**: In the dashboard go to **Resources → Add-ons → Heroku Postgres** (e.g. Mini or Essential-0), or run:
-   ```bash
-   heroku addons:create heroku-postgresql:mini -a pos-arcadian
-   ```
-   `DATABASE_URL` is set automatically; do not set it manually.
+Every stock row in this system carries a `minimum_threshold`: the level that
+triggers a restock alert. It is a number a person types, it defaults to zero,
+and in the seeded database it is **zero for all 40 items with sales history**.
 
-3. **Set Config Vars** in **Settings → Config Vars** (or via CLI):
-   - **SECRET_KEY**: Generate with `python -c "import secrets; print(secrets.token_hex(32))"`.
-   - **DEBUG**: `False`
-   - **ALLOWED_HOSTS**: `pos-arcadian.herokuapp.com` (and any custom domains).
-   - **HEROKU_APP_NAME** (optional): `pos-arcadian` — if set, the app host is added to `ALLOWED_HOSTS` automatically.
+A threshold of zero fires the alert when the shelf is already empty. That is
+the same as having no alert.
 
-4. **Connect GitHub**: In Heroku go to **Deploy → Deployment method → GitHub**, connect your account, select this repo and the branch to deploy (e.g. `main`). Enable "Automatic deploys" if desired.
+The data needed to set it properly was already in the database — every sale
+records what was consumed and when. `apps/replenishment/` derives it:
 
-5. **Deploy**: Push to the connected branch or click "Deploy branch". Heroku runs migrations and `collectstatic` in the release phase, then starts the web dyno.
+![Replenishment advice in the admin](docs/screenshots/replenishment-admin.png)
 
-Heroku uses **uv** for installs (no `requirements.txt`). Required repo files: `Procfile`, `.python-version`, `pyproject.toml`, and `uv.lock` (dependencies include `gunicorn`, `dj-database-url`, `whitenoise`, and `psycopg2-binary`).
+The screen opens on what runs out soonest. Beef Mince has 20.4 units, sells
+14.1 a day, and will be gone in **1.4 days** — while a replacement order takes
+five. Its configured threshold is 0.0; the history says it should be 101.8.
 
-## Core Features & Modules
+```mermaid
+flowchart LR
+    S[(SalesTransaction<br/>occurred_at)] --> C[(InventoryConsumption<br/>quantity_consumed)]
+    C --> D[daily demand series<br/>zeros included]
+    D --> M[mean demand]
+    D --> V[std deviation]
+    M --> LTD[lead-time demand<br/>mean x L]
+    V --> SS[safety stock<br/>z x sigma x sqrt L]
+    LTD --> ROP[reorder point]
+    SS --> ROP
+    ROP --> A{on hand < ROP?}
+    A -->|yes| O[order quantity]
+    A -->|no| K[ok]
+    ROP --> T[compare against<br/>configured threshold]
+```
 
-The Arcadian ERP system is composed of several integrated modules:
+| | |
+|---|---|
+| **Lead-time demand** | what sells while a replacement is in transit — `mean × L` |
+| **Safety stock** | cover for variability — `z × σ × √L` |
+| **Reorder point** | lead-time demand + safety stock |
+| **Days of cover** | `on hand ÷ mean daily demand` |
+| **Order quantity** | enough to clear the reorder point plus one more lead time |
 
-- **👥 User Management**: Role-based access control (RBAC) with groups and custom permissions.
-- **🏢 Branch & Warehouse**: Management of multiple physical locations and stock storage.
-- **📦 Inventory & BOM**: Product catalog, multi-location stock tracking, and Bill of Materials for manufacturing/packaging.
-- **🛒 Procurement**: Vendor management, Purchase Orders (PO), and Goods Receipts (GR).
-- **📋 Demands**: Internal requests for branch/warehouse replenishment.
-- **🚚 Transfers & Logistics**: Tracking stock movements between warehouses and branches.
-- **💰 Sales & Finance**: Recording sales transactions, vendor invoices, and payment tracking.
-- **📊 Reporting**: Integrated dashboard and data analysis tools.
+The `√L` is the part that is usually wrong. Demand over L days has L times the
+*variance*, so its standard deviation grows with the square root of L, not with
+L. There is a test that fails if that becomes linear.
 
-## Code Quality & Linting
+### Why this is not a language model
 
-This project uses [Ruff](https://docs.astral.sh/ruff/) for linting and code formatting. Ruff is configured in `pyproject.toml` and provides fast, comprehensive Python linting and formatting.
+The question "how much stock covers 95% of the demand arriving during a
+five-day lead time" has a correct answer derivable from the history. Asking a
+model to guess it would be less accurate, more expensive, and impossible to
+audit — and a wrong answer means either a stockout or dead capital sitting on a
+shelf.
 
-### Running Ruff Locally
+Where a quantity has a closed form, the closed form is the right tool. The
+judgment being demonstrated is choosing it.
 
-**Check for linting issues:**
+What the system does not do — and where a model would genuinely help — is read
+the supplier emails and delivery notes that would tell it the lead time is
+actually seven days this month rather than five. Lead time is currently a
+parameter someone passes in.
+
+### API
+
 ```bash
-uv run ruff check .
+GET /api/v1/replenishment/advice/?risk=critical&lead_time_days=5&service_level=0.95
 ```
 
-**Auto-fix linting issues:**
+```json
+{
+  "parameters": {"lead_time_days": 5, "service_level": 0.95, "history_days": 90},
+  "count": 6,
+  "results": [{
+    "item": "Beef Mince", "risk": "critical",
+    "on_hand": 20.44, "mean_daily_demand": 14.144, "stdev_daily_demand": 8.453,
+    "days_of_cover": 1.4, "projected_stockout": "2026-09-01",
+    "lead_time_demand": 70.72, "safety_stock": 31.09, "reorder_point": 101.81,
+    "configured_threshold": 0.0, "threshold_error": 101.81,
+    "suggested_order_quantity": 152.13
+  }]
+}
+```
+
+Lead time and service level are query parameters, not constants: a buyer who
+knows a supplier is slow this month can ask what that does to the numbers.
+
+---
+
+## Honest limits of the analysis
+
+- **Demand is assumed roughly normal.** For a slow-moving item selling zero
+  units most days that is a poor fit, and the safety stock will be wrong. Below
+  five days with any demand the code reports `unknown` rather than a number.
+- **`suggested_order_quantity` is not an economic order quantity.** EOQ needs
+  an ordering cost and a holding cost; this system records neither. Inventing
+  them to make the formula fit would produce a number that looks rigorous and
+  means nothing.
+- **Lead time is a parameter, not an observation.** The purchase orders needed
+  to measure it are in the database; using them is the obvious next step.
+- **No seasonality.** A 90-day mean will under-order into a known busy period.
+- **335 of 375 items have no sales history at all** in the seeded data, and are
+  excluded from the screen. On real data that ratio is the first thing to
+  investigate.
+
+---
+
+## What was broken
+
+**The project could not be seeded.** `manage.py setup_dev` died with
+`value too long for type character varying(8)`. `seed_data.py` set
+`barcode=f"BC-{sku_base}"` — an SKU-length string — into a `varchar(8)`, while
+the model right next to it already had a correct generator producing exactly 8
+characters. The seed now leaves the field blank and lets the model fill it.
+
+There is a `delete_long_barcodes` management command in the repository, which
+suggests someone hit this before and wrote a cleanup instead of fixing the
+cause.
+
+**Demand history could not be read from the obvious column.**
+`InventoryConsumption.timestamp` is `auto_now_add`, so it records when the row
+was written, not when the stock was consumed. In the seeded database:
+
+```
+consumption.timestamp range: 2026-08-31 14:41:44.72 -> 2026-08-31 14:41:44.81
+sale.occurred_at range     : 2026-03-05          -> 2026-08-13
+```
+
+Five months of sales, every consumption stamped inside the same tenth of a
+second. Any analysis using that column concludes all demand happened at once.
+The analysis reads `sales_transaction.occurred_at` instead, and a test pins it.
+
+**There was no test suite.** Seven `tests.py` files contained nothing but
+Django's boilerplate import — three of six lines, three of one line, and one
+empty file.
+
+**The admin screen would have been an N+1.** Six derived columns per row, each
+issuing its own query. Profiles are computed once per request and cached, and
+the ranking is a SQL annotation rather than a Python sort — an admin cannot
+order by a value computed in a `list_display` callable.
+
+---
+
+## Tests
+
 ```bash
-uv run ruff check --fix .
+docker compose run --rm web uv run python manage.py test
 ```
 
-**Check formatting:**
-```bash
-uv run ruff format .
-```
+27 tests. Most construct a `DemandProfile` directly rather than going through
+the database: the arithmetic decides whether a buyer over-orders or runs out,
+and it should be checkable without fixtures.
 
-**Format code automatically:**
-```bash
-uv run ruff format .
-```
+- **The formulas** — that safety stock scales with `√L`, that steady demand
+  needs less of it than erratic demand, that an order lifts stock past the
+  reorder point rather than exactly to it.
+- **The honest cases** — that an item with no demand reports `None` days of
+  cover rather than zero (which would rank a dead item as the most urgent
+  thing on the screen), and that too little history reports `unknown` rather
+  than a safety stock derived from two data points.
+- **The queries** — that demand is dated by the sale rather than by the row
+  write, and that days with no sales are counted as zeros. Dropping them would
+  inflate both the mean and the variance: an item sold on 3 of 90 days would
+  look like steady daily demand.
 
-## Pre-commit Hooks
+---
 
-This project uses [pre-commit](https://pre-commit.com/) to ensure code quality before commits. Pre-commit hooks will automatically run Ruff linter and formatter on your code before allowing you to commit.
-
-### Setting Up Pre-commit
-
-1. **Install pre-commit hooks:**
-   ```bash
-   uv run pre-commit install
-   ```
-
-2. **Test the hooks (optional):**
-   ```bash
-   uv run pre-commit run --all-files
-   ```
-
-Once installed, pre-commit will automatically run on every commit. If there are linting or formatting issues, the commit will be blocked, and you'll need to fix them before committing.
-
-### Manual Pre-commit Run
-
-To manually run pre-commit on all files:
-```bash
-uv run pre-commit run --all-files
-```
-
-## CI/CD
-
-This project uses GitHub Actions for continuous integration. Every pull request and push to main branches will automatically trigger:
-
-- **Ruff Linting Check**: Ensures code follows linting rules
-- **Ruff Format Check**: Ensures code is properly formatted
-- **Django Conventions Check**: Validates Django-specific coding conventions and project structure
-- **Auto-generated PR Descriptions**: Automatically generates PR descriptions from commit messages and code changes
-
-The CI pipeline will fail if:
-- There are any linting errors
-- Code is not properly formatted
-- Django conventions are violated
-- Critical directory structure issues are found
-
-This ensures that all code merged into the repository meets quality standards and follows Django best practices.
-
-### Django Conventions Check
-
-The Django conventions workflow automatically validates:
-
-#### 📁 Directory Structure
-- Verifies `apps/` and `config/` directories exist
-- Checks for `manage.py` in root directory
-- Validates required config files (`settings.py`, `urls.py`, `wsgi.py`, `asgi.py`)
-
-#### 📦 Django Apps Structure
-- Validates each app in `apps/` has required files:
-  - `__init__.py`, `apps.py`, `models.py`, `admin.py`, `views.py`, `tests.py`
-- Checks for `migrations/` directory with `__init__.py`
-- Ensures proper app structure
-
-#### 📝 Naming Conventions
-- Validates app names follow Django conventions (lowercase)
-- Checks for proper file naming
-
-#### 🔍 Django Best Practices
-- Validates `SECRET_KEY` uses environment variables (not hardcoded)
-- Checks `DEBUG` configuration
-- Ensures `.env` file is not tracked in git
-- Suggests `.env.example` for documentation
-
-#### 🗄️ Migrations
-- Checks for unapplied migrations
-- Validates migration files structure
-
-#### 📚 Code Quality
-- Runs Django's system check (`python manage.py check`)
-- Validates Python imports
-- Uses Ruff with Django-specific rules (DJ codes)
-
-All checks are **completely free** using GitHub Actions' free tier.
-
-### Auto-generated PR Descriptions
-
-When you open or update a pull request, a GitHub Action automatically generates a comprehensive PR description that includes:
-
-#### 📝 Commits
-- Complete list of all commits with:
-  - Commit hash and relative time
-  - Commit message
-  - Author name and email
-  - Time span of all commits
-
-#### 👥 Contributors
-- Breakdown of contributors and their commit counts
-
-#### 📁 Changed Files
-- Detailed file changes with:
-  - File status (Added, Modified, Deleted, Renamed)
-  - Line-by-line statistics for each file (+additions, -deletions, net change)
-  - Summary count of file types
-
-#### 📊 File Type Breakdown
-- Analysis of changed file types (e.g., `.py`, `.yml`, `.md`)
-- Count of files per extension type
-
-#### 📂 Affected Directories
-- List of directories affected by changes
-- File count per directory
-
-#### 📈 Detailed Statistics
-- Overall change statistics
-- Total lines added/removed with net change
-- Average additions per file
-- File change counts
-
-#### 🔍 Change Analysis
-- Automatic detection of:
-  - Database migrations
-  - Test file changes
-  - Configuration file changes (with warning)
-  - Documentation updates
-
-#### 📋 Summary
-- Overview generated from commit messages (up to 10 commits)
-
-The description is automatically updated when you push new commits to the PR. If you've already written a custom description, it won't be overwritten unless it was previously auto-generated.
-
-**Note**: This feature is completely free and uses GitHub Actions' free tier (2,000 minutes/month).
-
-## Project Structure
+## Layout
 
 ```
-arcadian-be/
-├── apps/                 # Application modules (Business logic)
-├── config/               # Project configuration
-│   ├── settings.py       # Main settings file
-│   ├── urls.py           # Root URL configuration
-│   └── ...
-├── .github/              # GitHub configuration
-│   └── workflows/        # GitHub Actions workflows
-│       ├── lint.yml      # Linting and formatting CI workflow
-│       ├── django-conventions.yml  # Django conventions and structure check
-│       └── pr-description.yml  # Auto-generate PR descriptions
-├── .env                  # Environment variables (git-ignored)
-├── .env.example          # Example environment variables
-├── .pre-commit-config.yaml  # Pre-commit hooks configuration
-├── manage.py             # Django command-line utility
-├── pyproject.toml        # Project metadata and dependencies
-└── README.md             # Project documentation
+apps/
+├── replenishment/     reorder points, safety stock, risk ranking   ← added
+│   ├── service.py         the analysis
+│   ├── admin.py           the buyer's screen
+│   ├── views.py           the API
+│   └── management/commands/seed_demand_history.py
+├── inventory/         items, categories, branch stock
+├── sales/             POS transactions and inventory consumption
+├── purchases/         purchase orders and goods receipts
+├── warehouse/         warehouse stock, transactions, requests
+├── transfers/         branch-to-branch movement
+├── demands/           branch replenishment requests
+└── reports/
 ```
+
+## Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `WEB_PORT` | `8500` | Host port for the admin and API |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | see `.env.example` | Postgres |
+| `SECRET_KEY` | — | Required |
+| `DEBUG` | `True` | |
+
+Replenishment defaults (`lead_time_days=5`, `service_level=0.95`,
+`history_days=90`) live in `apps/replenishment/service.py` and are overridable
+per request.
