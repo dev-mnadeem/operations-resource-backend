@@ -1,0 +1,17 @@
+name: Django tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    env:
+      DJANGO_DEBUG: "true"
+      DJANGO_SECRET_KEY: local-ci-only-signing-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv sync --frozen
+      - run: uv run --frozen python manage.py check
+      - run: uv run --frozen python manage.py makemigrations --check --dry-run
+      - run: uv run --frozen python manage.py test --noinput

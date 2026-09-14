@@ -72,3 +72,24 @@ make format
 ```
 
 Most of the tests are in `apps/replenishment/tests.py` and cover the demand and reorder calculations.
+
+## Replenishment data flow
+
+```mermaid
+flowchart LR
+    Sales[Sales history] --> Demand[Daily demand per item]
+    Demand --> Statistics[Mean and variation]
+    LeadTime[Configured lead time and service level] --> Advice[Reorder calculation]
+    Statistics --> Advice
+    Advice --> Admin[Admin replenishment view]
+    Advice --> API[Advice API]
+```
+
+Dependency updates were checked with the 27 replenishment tests on isolated
+SQLite. Those tests exercise the calculations, not the complete purchasing, POS
+or stock-transfer workflows. PostgreSQL and Redis remain required for the full
+local stack described above.
+
+## Author
+
+[**Muhammad Nadeem**](https://github.com/dev-mnadeem)

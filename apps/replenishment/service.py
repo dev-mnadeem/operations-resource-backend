@@ -122,7 +122,11 @@ class DemandProfile:
         """
         if not self.has_enough_history:
             return 0.0
-        return z_for(self.service_level) * self.stdev_daily_demand * (self.lead_time_days ** 0.5)
+        return (
+            z_for(self.service_level)
+            * self.stdev_daily_demand
+            * (self.lead_time_days**0.5)
+        )
 
     @property
     def reorder_point(self) -> float:

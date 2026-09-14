@@ -35,12 +35,16 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--days", type=int, default=120)
-        parser.add_argument("--items", type=int, default=40,
-                            help="How many items get an active demand pattern")
+        parser.add_argument(
+            "--items",
+            type=int,
+            default=40,
+            help="How many items get an active demand pattern",
+        )
         parser.add_argument("--seed", type=int, default=11)
 
     @transaction.atomic
-    def handle(self, *args, **options):
+    def handle(self, *_args, **options):
         rng = random.Random(options["seed"])
         days = options["days"]
         today = timezone.now().date()
@@ -116,7 +120,7 @@ class Command(BaseCommand):
                 sales_transaction=sale,
                 quantity_consumed=Decimal(sale.quantity_sold),
             )
-            for sale, item in zip(pending_sales, pending_items)
+            for sale, item in zip(pending_sales, pending_items, strict=True)
         ]
         InventoryConsumption.objects.bulk_create(consumptions, batch_size=500)
 
@@ -131,11 +135,13 @@ class Command(BaseCommand):
             row.quantity = Decimal(str(round(base * rng.uniform(1, 30), 2)))
             row.save(update_fields=["quantity"])
 
-        self.stdout.write(self.style.SUCCESS(
-            f"  {sales_made:,} sales and {len(consumptions):,} consumptions "
-            f"across {days} days for {len(items)} items "
-            f"({start} → {today})"
-        ))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"  {sales_made:,} sales and {len(consumptions):,} consumptions "
+                f"across {days} days for {len(items)} items "
+                f"({start} → {today})"
+            )
+        )
 
     @staticmethod
     def _poisson(rng: random.Random, lam: float) -> int:

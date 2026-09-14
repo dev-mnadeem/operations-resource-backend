@@ -33,21 +33,21 @@ from apps.sales.models import InventoryConsumption, SalesTransaction
 
 def profile(**overrides) -> DemandProfile:
     """A profile with sane defaults; override only what a test is about."""
-    defaults = dict(
-        item_id=1,
-        item_name="Beef Mince",
-        branch_id="BR001",
-        branch_name="Raya",
-        days_observed=90,
-        days_with_demand=80,
-        total_consumed=900.0,
-        mean_daily_demand=10.0,
-        stdev_daily_demand=4.0,
-        on_hand=50.0,
-        configured_threshold=0.0,
-        lead_time_days=5,
-        service_level=0.95,
-    )
+    defaults = {
+        "item_id": 1,
+        "item_name": "Beef Mince",
+        "branch_id": "BR001",
+        "branch_name": "Raya",
+        "days_observed": 90,
+        "days_with_demand": 80,
+        "total_consumed": 900.0,
+        "mean_daily_demand": 10.0,
+        "stdev_daily_demand": 4.0,
+        "on_hand": 50.0,
+        "configured_threshold": 0.0,
+        "lead_time_days": 5,
+        "service_level": 0.95,
+    }
     defaults.update(overrides)
     return DemandProfile(**defaults)
 
@@ -67,7 +67,9 @@ class ServiceLevelTests(TestCase):
 
 class ReorderMathTests(TestCase):
     def test_lead_time_demand_is_mean_times_lead_time(self):
-        self.assertEqual(profile(mean_daily_demand=10, lead_time_days=5).lead_time_demand, 50)
+        self.assertEqual(
+            profile(mean_daily_demand=10, lead_time_days=5).lead_time_demand, 50
+        )
 
     def test_safety_stock_scales_with_the_square_root_of_lead_time(self):
         """
@@ -89,7 +91,9 @@ class ReorderMathTests(TestCase):
         self.assertLess(steady.safety_stock, erratic.safety_stock)
 
     def test_days_of_cover_is_stock_over_demand(self):
-        self.assertAlmostEqual(profile(on_hand=50, mean_daily_demand=10).days_of_cover, 5.0)
+        self.assertAlmostEqual(
+            profile(on_hand=50, mean_daily_demand=10).days_of_cover, 5.0
+        )
 
     def test_days_of_cover_is_none_when_nothing_is_moving(self):
         # Not infinity and not zero: dividing by no demand has no answer, and
@@ -98,7 +102,9 @@ class ReorderMathTests(TestCase):
 
     def test_projected_stockout_is_cover_days_from_today(self):
         p = profile(on_hand=30, mean_daily_demand=10)
-        self.assertEqual(p.projected_stockout, timezone.now().date() + timedelta(days=3))
+        self.assertEqual(
+            p.projected_stockout, timezone.now().date() + timedelta(days=3)
+        )
 
 
 class OrderQuantityTests(TestCase):
@@ -152,7 +158,9 @@ class DemandHistoryTests(TestCase):
     """The database side: that demand is read from the right column."""
 
     def setUp(self):
-        self.branch = Branch.objects.create(branch_code="BR001", name="Raya", address="x")
+        self.branch = Branch.objects.create(
+            branch_code="BR001", name="Raya", address="x"
+        )
         self.unit = UnitOfMeasure.objects.create(name="Kilogram", abbreviation="kg")
         self.item = InventoryItem.objects.create(name="Beef Mince", unit=self.unit)
         category = ProductCategory.objects.create(name="Mains")

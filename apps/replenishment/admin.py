@@ -60,15 +60,14 @@ class ReplenishmentAdviceAdmin(admin.ModelAdmin):
     search_fields = ("item__name", "item__sku")
     list_per_page = 25
 
-
     # Read-only: this screen advises, it does not edit stock.
-    def has_add_permission(self, request):
+    def has_add_permission(self, request):  # noqa: ARG002 — Django hook signature
         return False
 
-    def has_change_permission(self, request, obj=None):
+    def has_change_permission(self, request, obj=None):  # noqa: ARG002 — Django hook signature
         return False
 
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002 — Django hook signature
         return False
 
     def get_queryset(self, request):
@@ -158,7 +157,9 @@ class ReplenishmentAdviceAdmin(admin.ModelAdmin):
         profile = self._profile_for_display(obj)
         if profile.days_of_cover is None:
             return "—"
-        colour = "#b91c1c" if profile.days_of_cover <= profile.lead_time_days else "#111827"
+        colour = (
+            "#b91c1c" if profile.days_of_cover <= profile.lead_time_days else "#111827"
+        )
         return format_html(
             '<span style="color:{}">{}</span>', colour, f"{profile.days_of_cover:.1f}"
         )
